@@ -1,25 +1,19 @@
 {
   "@odata.type": "#microsoft.graph.conditionalAccessPolicy",
-  "displayName": "MSP-CA007-Global-Block-UnknownPlatforms",
+  "displayName": "MSP-CA310-Windows-Require-CompliantOrHybridJoined-Alternative",
   "state": "disabled",
   "conditions": {
     "userRiskLevels": [],
     "signInRiskLevels": [],
     "servicePrincipalRiskLevels": [],
     "clientAppTypes": [
-      "all"
+      "mobileAppsAndDesktopClients"
     ],
     "platforms": {
       "includePlatforms": [
-        "all"
+        "windows"
       ],
-      "excludePlatforms": [
-        "android",
-        "iOS",
-        "windows",
-        "macOS",
-        "linux"
-      ]
+      "excludePlatforms": []
     },
     "locations": null,
     "devices": null,
@@ -28,7 +22,10 @@
       "includeApplications": [
         "All"
       ],
-      "excludeApplications": [],
+      "excludeApplications": [
+        "0000000a-0000-0000-c000-000000000000",
+        "d4ebce55-015a-49b5-a083-c84d1797ae8c"
+      ],
       "includeUserActions": [],
       "includeAuthenticationContextClassReferences": [],
       "applicationFilter": null
@@ -41,14 +38,14 @@
       "includeGroups": [],
       "excludeGroups": [
         "10000000-0000-4000-8000-000000000001",
-        "10000000-0000-4000-8000-000000000015"
+        "10000000-0000-4000-8000-000000000006"
       ],
       "includeRoles": [],
       "excludeRoles": [],
       "includeGuestsOrExternalUsers": null,
       "excludeGuestsOrExternalUsers": {
         "@odata.type": "#microsoft.graph.conditionalAccessGuestsOrExternalUsers",
-        "guestOrExternalUserTypes": "serviceProvider",
+        "guestOrExternalUserTypes": "internalGuest,b2bCollaborationGuest,b2bCollaborationMember,b2bDirectConnectUser,otherExternalUser",
         "externalTenants": {
           "@odata.type": "#microsoft.graph.conditionalAccessAllExternalTenants",
           "membershipKind": "all"
@@ -62,7 +59,8 @@
   "grantControls": {
     "operator": "OR",
     "builtInControls": [
-      "block"
+      "compliantDevice",
+      "domainJoinedDevice"
     ],
     "customAuthenticationFactors": [],
     "termsOfUse": [],

@@ -12,7 +12,7 @@ This repository does not concatenate frameworks. It maps their objectives, remov
 | Location restriction | Microsoft, j0eyv | Portable `AllTrusted` scaffolding included Disabled; customer countries/IPs remain tenant data |
 | Guest access | Microsoft, j0eyv, ITProMentor | Dedicated MFA/session policies and admin-portal block; service-provider identities omitted |
 | Mobile access | Microsoft, j0eyv, ITProMentor | App Protection is primary; compliant-device policies are Disabled alternatives |
-| Desktop compliance | Microsoft, j0eyv, ITProMentor, AlexFilipin | Separate Windows, macOS, and optional Linux policies |
+| Desktop compliance | Microsoft, j0eyv, ITProMentor, AlexFilipin | Separate Windows, macOS, and optional Linux policies; a Disabled hybrid-Azure-AD-join alternative (CA310) covers environments not fully on Intune compliance |
 | Unmanaged browser | Microsoft, j0eyv, ITProMentor | Exchange/SharePoint app-enforced restrictions |
 | Token protection | Microsoft | Supported Exchange/SharePoint native-client scope; Windows Report-only and Apple Preview Disabled |
 | Defender session control | Microsoft | Monitor-only browser template included Disabled pending Defender integration |

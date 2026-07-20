@@ -27,6 +27,8 @@ $ids = [ordered]@{
     ExcludeCAE              = '10000000-0000-4000-8000-000000000012'
     ExcludeCloudAppSecurity = '10000000-0000-4000-8000-000000000013'
     ExcludeInsiderRisk      = '10000000-0000-4000-8000-000000000014'
+    ExcludeUnknownPlatforms = '10000000-0000-4000-8000-000000000015'
+    ExcludeUnmanagedBrowser = '10000000-0000-4000-8000-000000000016'
 }
 
 $groupNames = [ordered]@{
@@ -44,6 +46,8 @@ $groupNames = [ordered]@{
     ExcludeCAE             = 'MSP-CA-Exclude-StrictCAE'
     ExcludeCloudAppSecurity = 'MSP-CA-Exclude-DefenderAppControl'
     ExcludeInsiderRisk     = 'MSP-CA-Exclude-InsiderRisk'
+    ExcludeUnknownPlatforms = 'MSP-CA-Exclude-UnknownPlatforms'
+    ExcludeUnmanagedBrowser = 'MSP-CA-Exclude-UnmanagedBrowser'
 }
 
 $groupDescriptions = [ordered]@{
@@ -52,7 +56,7 @@ $groupDescriptions = [ordered]@{
     ExcludeDeviceCode      = 'Approved identities that have a documented requirement for OAuth device code flow.'
     ExcludeAuthTransfer    = 'Approved identities that require authentication transfer. Keep empty unless tested.'
     ExcludeRegistration    = 'Temporary exception for device or security-information registration workflows.'
-    ExcludeCompliance      = 'Temporary device compliance exception. Keep empty by default.'
+    ExcludeCompliance      = 'Temporary device compliance exception, shared by every compliant-device requirement (CA102, CA302-306, CA310). Keep empty by default.'
     ExcludeAppProtection   = 'Temporary Intune App Protection exception. Keep empty by default.'
     AllowGuestAdminPortals = 'Explicitly approved B2B guest administrators allowed to reach Microsoft admin portals.'
     ExcludeRisk            = 'Emergency risk-policy exceptions. Keep empty by default.'
@@ -61,6 +65,8 @@ $groupDescriptions = [ordered]@{
     ExcludeCAE             = 'Temporary exception from strict-location Continuous Access Evaluation. Keep empty by default.'
     ExcludeCloudAppSecurity = 'Temporary exception from Defender for Cloud Apps session controls. Keep empty by default.'
     ExcludeInsiderRisk     = 'Approved exception from Purview insider-risk enforcement. Keep empty by default.'
+    ExcludeUnknownPlatforms = 'Temporary exception from the unknown-platform block (CA007) only. Keep empty by default.'
+    ExcludeUnmanagedBrowser = 'Temporary exception from the unmanaged-browser download restriction (CA301) only. Keep empty by default.'
 }
 
 $mfaStrength = [ordered]@{
@@ -305,7 +311,7 @@ $policies += New-Policy -DisplayName 'MSP-CA006-Global-Block-AuthenticationTrans
     -GrantControls (New-Grant -BuiltInControls @('block'))
 
 $policies += New-Policy -DisplayName 'MSP-CA007-Global-Block-UnknownPlatforms' `
-    -Conditions (New-Conditions -Users (New-UserScope AllHuman -ExcludeGroups @($allGroup, $ids.ExcludeCompliance)) `
+    -Conditions (New-Conditions -Users (New-UserScope AllHuman -ExcludeGroups @($allGroup, $ids.ExcludeUnknownPlatforms)) `
         -Platforms ([ordered]@{
             includePlatforms = @('all')
             excludePlatforms = @('android', 'iOS', 'windows', 'macOS', 'linux')
@@ -391,7 +397,7 @@ $policies += New-Policy -DisplayName 'MSP-CA300-Mobile-Require-AppProtection' `
     -GrantControls (New-Grant -BuiltInControls @('compliantApplication'))
 
 $policies += New-Policy -DisplayName 'MSP-CA301-UnmanagedBrowser-Restrict-Downloads' `
-    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeCompliance)) `
+    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeUnmanagedBrowser)) `
         -Applications (New-ApplicationsScope -IncludeApplications @(
             '00000002-0000-0ff1-ce00-000000000000',
             '00000003-0000-0ff1-ce00-000000000000'
@@ -410,6 +416,14 @@ $policies += New-Policy -DisplayName 'MSP-CA302-Windows-Require-CompliantDevice'
         -ClientAppTypes @('mobileAppsAndDesktopClients') `
         -Platforms ([ordered]@{ includePlatforms = @('windows'); excludePlatforms = @() })) `
     -GrantControls (New-Grant -BuiltInControls @('compliantDevice'))
+
+$policies += New-Policy -DisplayName 'MSP-CA310-Windows-Require-CompliantOrHybridJoined-Alternative' `
+    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeCompliance)) `
+        -Applications (New-ApplicationsScope -ExcludeApplications $intuneExclusions) `
+        -ClientAppTypes @('mobileAppsAndDesktopClients') `
+        -Platforms ([ordered]@{ includePlatforms = @('windows'); excludePlatforms = @() })) `
+    -GrantControls (New-Grant -BuiltInControls @('compliantDevice', 'domainJoinedDevice')) `
+    -State disabled
 
 $policies += New-Policy -DisplayName 'MSP-CA303-macOS-Require-CompliantDevice' `
     -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeCompliance)) `
@@ -478,15 +492,15 @@ $everyTime = [ordered]@{
 }
 
 $policies += New-Policy -DisplayName 'MSP-CA400-Risk-SignIn-MediumHigh-Require-MFA' `
-    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeRisk)) `
+    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeRisk, $ids.ExcludeMfa)) `
         -SignInRiskLevels @('medium', 'high')) `
     -GrantControls (New-Grant -Operator AND -AuthenticationStrength $mfaStrength) `
     -SessionControls ([ordered]@{ signInFrequency = $everyTime })
 
 $policies += New-Policy -DisplayName 'MSP-CA401-Risk-User-High-Require-Remediation' `
-    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeRisk)) `
+    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeRisk, $ids.ExcludeMfa)) `
         -UserRiskLevels @('high')) `
-    -GrantControls (New-Grant -BuiltInControls @('riskRemediation') -Operator AND -AuthenticationStrength $mfaStrength) `
+    -GrantControls (New-Grant -BuiltInControls @('riskRemediation')) `
     -SessionControls ([ordered]@{ signInFrequency = $everyTime })
 
 $policies += New-Policy -DisplayName 'MSP-CA402-InsiderRisk-Elevated-Block' `

@@ -2,18 +2,18 @@
 
 A comprehensive, deduplicated Microsoft Entra Conditional Access library for CIPP. It covers human identities, administrators, guests, managed and unmanaged devices, token theft, identity risk, insider risk, workload identities, network restrictions, session controls, authentication flows, and Agent 365 preview scenarios.
 
-The library contains **36 policies and 14 supporting groups**. Completeness does not mean every policy should be enabled: 19 broadly deployable policies start in **Report-only**, while 17 dependency-heavy, alternative, restrictive, or preview policies start **Disabled**.
+The library contains **37 policies and 16 supporting groups**. Completeness does not mean every policy should be enabled: 19 broadly deployable policies start in **Report-only**, while 18 dependency-heavy, alternative, restrictive, or preview policies start **Disabled**.
 
 ## Coverage
 
 | Module | Policies | Initial posture |
 |---|---:|---|
 | Foundation, administrators, and guests | 16 | 11 Report-only; 5 Disabled advanced controls |
-| Intune, unmanaged access, and token protection | 10 | 5 Report-only; 5 Disabled alternatives/integrations |
+| Intune, unmanaged access, and token protection | 11 | 5 Report-only; 6 Disabled alternatives/integrations |
 | User and insider risk | 3 | 2 Report-only; insider-risk policy Disabled |
 | Workload identities | 2 | High-risk block Report-only; location restriction Disabled |
 | Agent identities and agent users | 5 | Disabled because the surface is Preview |
-| **Total** | **36** | **19 Report-only; 17 Disabled** |
+| **Total** | **37** | **19 Report-only; 18 Disabled** |
 
 See [POLICY-MATRIX.md](POLICY-MATRIX.md) for every policy, license tier, dependency, and overlap rule.
 
@@ -24,7 +24,9 @@ See [POLICY-MATRIX.md](POLICY-MATRIX.md) for every policy, license tier, depende
 - Administrator phishing-resistant MFA intentionally layers over ordinary MFA.
 - Mobile App Protection and mobile device-compliance templates are alternatives; the compliance alternatives remain Disabled.
 - Device compliance protects desktop clients while app-enforced restrictions preserve controlled browser access from unmanaged devices.
-- Risk policies use current self-remediation guidance instead of blanket user blocking.
+- `MSP-CA-Exclude-DeviceCompliance` is intentionally shared by every compliant-device grant control (CA102, CA302-306, CA310) because they enforce the same control; the unknown-platform block (CA007) and unmanaged-browser restriction (CA301) enforce different controls and therefore own dedicated exception groups so membership in one doesn't silently bypass the other.
+- CA310 is a Disabled alternative to CA302 for environments that rely on hybrid Azure AD join rather than full Intune compliance; do not enable both without intent, same as the CA300/CA304/CA305 mobile alternatives.
+- Risk policies use current self-remediation guidance instead of blanket user blocking, and exclude the same temporary service-account group as baseline MFA so an account exempted from CA002 isn't still challenged by the risk policies it can't complete.
 - Token protection is limited to supported Exchange Online and SharePoint Online native-client scenarios.
 - The retired **Require approved client app** control is never used.
 - CIPP/GDAP `serviceProvider` identities are excluded from human and administrator personas and omitted from the guest persona.
@@ -45,8 +47,8 @@ See [POLICY-MATRIX.md](POLICY-MATRIX.md) for every policy, license tier, depende
 
 1. Publish this folder as a GitHub repository.
 2. In CIPP, open **Tools → Community Repositories → Find a Repository** and add `owner/repository`.
-3. Import the 14 files under `Config/Groups` first.
-4. Import the 36 files under `Config/ConditionalAccess` next.
+3. Import the 16 files under `Config/Groups` first.
+4. Import the 37 files under `Config/ConditionalAccess` next.
 5. Do not select `Config/MigrationTable.json`; CIPP reads it while importing the CA templates.
 6. Deploy only the appropriate module through **Tenant → Conditional Access → Policies → Deploy Template**.
 7. Retain the template state, display-name replacement, group creation, and CIPP service-provider exception.

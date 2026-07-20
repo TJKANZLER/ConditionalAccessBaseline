@@ -44,14 +44,14 @@ foreach ($duplicate in $duplicateNames) {
     $errors.Add("Duplicate policy display name: $($duplicate.Name)")
 }
 
-if ($policies.Count -ne 36) {
-    $errors.Add("Expected 36 Conditional Access policies but found $($policies.Count)")
+if ($policies.Count -ne 37) {
+    $errors.Add("Expected 37 Conditional Access policies but found $($policies.Count)")
 }
 
 $reportOnlyCount = @($policies | Where-Object state -eq 'enabledForReportingButNotEnforced').Count
 $disabledCount = @($policies | Where-Object state -eq 'disabled').Count
-if ($reportOnlyCount -ne 19 -or $disabledCount -ne 17) {
-    $errors.Add("Expected 19 Report-only and 17 Disabled policies; found $reportOnlyCount and $disabledCount")
+if ($reportOnlyCount -ne 19 -or $disabledCount -ne 18) {
+    $errors.Add("Expected 19 Report-only and 18 Disabled policies; found $reportOnlyCount and $disabledCount")
 }
 
 $migration = Get-Content -LiteralPath $migrationPath -Raw | ConvertFrom-Json -Depth 20
@@ -94,8 +94,8 @@ foreach ($groupId in $groupIds) {
     }
 }
 
-if ($groupIds.Count -ne 14) {
-    $errors.Add("Expected 14 supporting groups but found $($groupIds.Count)")
+if ($groupIds.Count -ne 16) {
+    $errors.Add("Expected 16 supporting groups but found $($groupIds.Count)")
 }
 
 $knownGroupIds = @($groupIds)
@@ -104,6 +104,22 @@ foreach ($policy in $policies) {
         if ($groupId -and $groupId -notin $knownGroupIds) {
             $errors.Add("Unmapped group ID $groupId in $($policy.displayName)")
         }
+    }
+}
+
+$deviceComplianceGroupId = ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-DeviceCompliance').id
+$deviceComplianceOwners = @(
+    'MSP-CA102-Admins-Require-CompliantDevice',
+    'MSP-CA302-Windows-Require-CompliantDevice',
+    'MSP-CA303-macOS-Require-CompliantDevice',
+    'MSP-CA304-iOS-Require-CompliantDevice-Alternative',
+    'MSP-CA305-Android-Require-CompliantDevice-Alternative',
+    'MSP-CA306-Linux-Require-CompliantDevice',
+    'MSP-CA310-Windows-Require-CompliantOrHybridJoined-Alternative'
+)
+foreach ($policy in $policies) {
+    if ($deviceComplianceGroupId -in @($policy.conditions.users.excludeGroups) -and $policy.displayName -notin $deviceComplianceOwners) {
+        $errors.Add("$($policy.displayName) reuses MSP-CA-Exclude-DeviceCompliance outside its intended compliant-device scope; give it a dedicated exception group.")
     }
 }
 
@@ -128,6 +144,7 @@ $mustRemainDisabledPatterns = @(
     'MSP-CA305-*',
     'MSP-CA306-*',
     'MSP-CA308-*',
+    'MSP-CA310-*',
     'MSP-CA309-*',
     'MSP-CA402-*',
     'MSP-CA501-*',
@@ -156,13 +173,20 @@ foreach ($policy in $tokenPolicies) {
 
 $riskRemediation = $policies | Where-Object displayName -eq 'MSP-CA401-Risk-User-High-Require-Remediation'
 if (($riskRemediation.grantControls.builtInControls -notcontains 'riskRemediation') -or
-    $riskRemediation.grantControls.operator -ne 'AND' -or
-    -not $riskRemediation.grantControls.authenticationStrength -or
+    $riskRemediation.grantControls.authenticationStrength -or
     $riskRemediation.conditions.userRiskLevels -notcontains 'high' -or
     $riskRemediation.conditions.signInRiskLevels.Count -gt 0 -or
     $riskRemediation.conditions.applications.includeApplications -notcontains 'All' -or
     $riskRemediation.conditions.applications.excludeApplications.Count -gt 0) {
     $errors.Add('High user-risk remediation policy does not meet Microsoft Graph control constraints.')
+}
+
+$mfaTemporaryGroupId = ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-MFA-Temporary').id
+foreach ($riskPolicyName in 'MSP-CA400-Risk-SignIn-MediumHigh-Require-MFA', 'MSP-CA401-Risk-User-High-Require-Remediation') {
+    $riskPolicy = $policies | Where-Object displayName -eq $riskPolicyName
+    if ($mfaTemporaryGroupId -notin @($riskPolicy.conditions.users.excludeGroups)) {
+        $errors.Add("$riskPolicyName does not exclude MSP-CA-Exclude-MFA-Temporary; MFA-exempt service accounts would still be challenged.")
+    }
 }
 
 $workloadPolicies = @($policies | Where-Object displayName -Like 'MSP-CA5*')

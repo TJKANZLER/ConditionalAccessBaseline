@@ -70,6 +70,16 @@
       "DisplayName": "MSP-CA-Exclude-InsiderRisk",
       "Id": "10000000-0000-4000-8000-000000000014",
       "Type": "Group"
+    },
+    {
+      "DisplayName": "MSP-CA-Exclude-UnknownPlatforms",
+      "Id": "10000000-0000-4000-8000-000000000015",
+      "Type": "Group"
+    },
+    {
+      "DisplayName": "MSP-CA-Exclude-UnmanagedBrowser",
+      "Id": "10000000-0000-4000-8000-000000000016",
+      "Type": "Group"
     }
   ],
   "Organization": "MSP CIPP Conditional Access Blueprint"

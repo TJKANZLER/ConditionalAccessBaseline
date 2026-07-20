@@ -1,6 +1,6 @@
 # Deployment runbook
 
-The repository contains 36 Conditional Access templates and 14 group templates. `Config/MigrationTable.json` is support metadata, not a selectable template.
+The repository contains 37 Conditional Access templates and 16 group templates. `Config/MigrationTable.json` is support metadata, not a selectable template.
 
 ## 1. Prepare
 
@@ -14,8 +14,8 @@ The repository contains 36 Conditional Access templates and 14 group templates. 
 
 1. Publish this directory as a GitHub repository.
 2. Add `owner/repository` under **Tools → Community Repositories**.
-3. Import the 14 group JSON files.
-4. Import the 36 Conditional Access JSON files.
+3. Import the 16 group JSON files.
+4. Import the 37 Conditional Access JSON files.
 5. Do not import `MigrationTable.json`; CIPP uses it automatically for dependency conversion.
 
 If bulk row selection is unavailable in the installed CIPP frontend, import the same folders row by row.
@@ -41,6 +41,7 @@ Do not enable Disabled templates as a batch. Promote each optional template only
 ## Optional decisions
 
 - Choose CA300 App Protection or CA304/CA305 mobile compliance as the normal mobile model.
+- Choose CA302 (Intune compliance) or CA310 (compliant OR hybrid-joined) as the normal Windows desktop model; do not run both.
 - Enable CA007 only after deciding how ChromeOS and other platforms are handled.
 - Enable CA008 or CA501 only after every legitimate public egress address is represented by a trusted named location.
 - Integrate CA104's authentication context with PIM or a sensitive application before expecting evaluations.

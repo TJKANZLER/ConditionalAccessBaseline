@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.1.0 — 2026-07-20
+
+- Gave CA007 (unknown-platform block) and CA301 (unmanaged-browser download restriction) their own dedicated exception groups (`MSP-CA-Exclude-UnknownPlatforms`, `MSP-CA-Exclude-UnmanagedBrowser`) instead of reusing `MSP-CA-Exclude-DeviceCompliance`, so a device-compliance exception can no longer silently bypass an unrelated control.
+- Added `MSP-CA-Exclude-MFA-Temporary` to CA400 and CA401's exclusions so legacy service accounts exempted from baseline MFA (CA002) aren't still challenged for MFA by the risk-based policies.
+- Simplified CA401's grant control to `riskRemediation` alone, removing a stacked `authenticationStrength` requirement that duplicated what risk remediation already enforces and was unverified against the current Graph schema.
+- Added MSP-CA310, a Disabled alternative to CA302 that accepts `compliantDevice` OR `domainJoinedDevice`, covering hybrid-Azure-AD-joined Windows environments that aren't fully on Intune compliance.
+- Expanded supporting groups from 14 to 16 and Conditional Access policies from 36 to 37 (19 Report-only, 18 Disabled).
+- Extended `Test-CippCaBlueprint.ps1` to assert the new group scoping and the MFA-Temporary/risk-policy relationship so these regressions can't reappear silently.
+
 ## 2.0.0 — 2026-07-20
 
 - Expanded the library from 17 to 36 Conditional Access policies.

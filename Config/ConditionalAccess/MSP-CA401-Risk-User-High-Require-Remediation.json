@@ -32,7 +32,8 @@
       "includeGroups": [],
       "excludeGroups": [
         "10000000-0000-4000-8000-000000000001",
-        "10000000-0000-4000-8000-000000000009"
+        "10000000-0000-4000-8000-000000000009",
+        "10000000-0000-4000-8000-000000000002"
       ],
       "includeRoles": [],
       "excludeRoles": [],
@@ -51,18 +52,13 @@
     "agentContext": null
   },
   "grantControls": {
-    "operator": "AND",
+    "operator": "OR",
     "builtInControls": [
       "riskRemediation"
     ],
     "customAuthenticationFactors": [],
     "termsOfUse": [],
-    "authenticationStrength": {
-      "id": "00000000-0000-0000-0000-000000000002",
-      "displayName": "Multifactor authentication",
-      "policyType": "builtIn",
-      "requirementsSatisfied": "mfa"
-    }
+    "authenticationStrength": null
   },
   "sessionControls": {
     "signInFrequency": {
