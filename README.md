@@ -15,7 +15,16 @@ The library contains **37 policies and 16 supporting groups**. Completeness does
 | Agent identities and agent users | 5 | Disabled because the surface is Preview |
 | **Total** | **37** | **19 Report-only; 18 Disabled** |
 
-See [POLICY-MATRIX.md](POLICY-MATRIX.md) for every policy, license tier, dependency, and overlap rule, [POLICY-GUIDE.md](POLICY-GUIDE.md) for what each policy does in plain English plus the issues it tends to cause and how to solve them, and [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for how to actually diagnose a sign-in failure once it happens.
+## Documentation
+
+| Doc | What's in it |
+|---|---|
+| [POLICY-MATRIX.md](POLICY-MATRIX.md) | Every policy's scope, license tier, dependency, and overlap rule |
+| [POLICY-GUIDE.md](POLICY-GUIDE.md) | What each policy does in plain English, plus the issues it tends to cause and how to solve them |
+| [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | How to diagnose a sign-in failure once it happens — sign-in logs, AADSTS error codes, exclusion-group checklist |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Phased rollout order, per-phase gates, and rollback guidance |
+| [SOURCE-MAPPING.md](SOURCE-MAPPING.md) | Which frameworks were reviewed and what was deliberately changed or excluded for this library |
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
 
 ## Design principles
 
