@@ -15,7 +15,7 @@ The library contains **37 policies and 16 supporting groups**. Completeness does
 | Agent identities and agent users | 5 | Disabled because the surface is Preview |
 | **Total** | **37** | **19 Report-only; 18 Disabled** |
 
-See [POLICY-MATRIX.md](POLICY-MATRIX.md) for every policy, license tier, dependency, and overlap rule, and [POLICY-GUIDE.md](POLICY-GUIDE.md) for what each policy does in plain English plus the issues it tends to cause and how to solve them.
+See [POLICY-MATRIX.md](POLICY-MATRIX.md) for every policy, license tier, dependency, and overlap rule, [POLICY-GUIDE.md](POLICY-GUIDE.md) for what each policy does in plain English plus the issues it tends to cause and how to solve them, and [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for how to actually diagnose a sign-in failure once it happens.
 
 ## Design principles
 
