@@ -1,0 +1,12 @@
+{
+  "id": "10000000-0000-4000-8000-000000000004",
+  "organizationId": "%OrganizationId%",
+  "description": "Approved identities that require authentication transfer. Keep empty unless tested.",
+  "displayName": "MSP-CA-Exclude-AuthenticationTransfer",
+  "groupTypes": [],
+  "mail": null,
+  "mailEnabled": false,
+  "mailNickname": "mspca-excludeauthtransfer",
+  "securityEnabled": true,
+  "visibility": null
+}

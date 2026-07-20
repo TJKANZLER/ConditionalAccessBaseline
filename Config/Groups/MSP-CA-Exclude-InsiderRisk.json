@@ -1,0 +1,12 @@
+{
+  "id": "10000000-0000-4000-8000-000000000014",
+  "organizationId": "%OrganizationId%",
+  "description": "Approved exception from Purview insider-risk enforcement. Keep empty by default.",
+  "displayName": "MSP-CA-Exclude-InsiderRisk",
+  "groupTypes": [],
+  "mail": null,
+  "mailEnabled": false,
+  "mailNickname": "mspca-excludeinsiderrisk",
+  "securityEnabled": true,
+  "visibility": null
+}

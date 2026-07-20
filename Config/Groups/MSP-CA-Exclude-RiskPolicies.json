@@ -1,0 +1,12 @@
+{
+  "id": "10000000-0000-4000-8000-000000000009",
+  "organizationId": "%OrganizationId%",
+  "description": "Emergency risk-policy exceptions. Keep empty by default.",
+  "displayName": "MSP-CA-Exclude-RiskPolicies",
+  "groupTypes": [],
+  "mail": null,
+  "mailEnabled": false,
+  "mailNickname": "mspca-excluderisk",
+  "securityEnabled": true,
+  "visibility": null
+}

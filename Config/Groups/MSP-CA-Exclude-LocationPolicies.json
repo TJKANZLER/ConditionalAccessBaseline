@@ -1,0 +1,12 @@
+{
+  "id": "10000000-0000-4000-8000-000000000010",
+  "organizationId": "%OrganizationId%",
+  "description": "Temporary exception from trusted-location restrictions. Keep empty by default.",
+  "displayName": "MSP-CA-Exclude-LocationPolicies",
+  "groupTypes": [],
+  "mail": null,
+  "mailEnabled": false,
+  "mailNickname": "mspca-excludelocation",
+  "securityEnabled": true,
+  "visibility": null
+}

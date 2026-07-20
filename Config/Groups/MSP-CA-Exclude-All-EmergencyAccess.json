@@ -1,0 +1,12 @@
+{
+  "id": "10000000-0000-4000-8000-000000000001",
+  "organizationId": "%OrganizationId%",
+  "description": "Emergency access accounts only. Membership must be monitored and alerted.",
+  "displayName": "MSP-CA-Exclude-All-EmergencyAccess",
+  "groupTypes": [],
+  "mail": null,
+  "mailEnabled": false,
+  "mailNickname": "mspca-excludeall",
+  "securityEnabled": true,
+  "visibility": null
+}

@@ -1,0 +1,12 @@
+{
+  "id": "10000000-0000-4000-8000-000000000003",
+  "organizationId": "%OrganizationId%",
+  "description": "Approved identities that have a documented requirement for OAuth device code flow.",
+  "displayName": "MSP-CA-Exclude-DeviceCodeFlow",
+  "groupTypes": [],
+  "mail": null,
+  "mailEnabled": false,
+  "mailNickname": "mspca-excludedevicecode",
+  "securityEnabled": true,
+  "visibility": null
+}

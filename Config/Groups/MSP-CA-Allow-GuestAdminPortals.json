@@ -1,0 +1,12 @@
+{
+  "id": "10000000-0000-4000-8000-000000000008",
+  "organizationId": "%OrganizationId%",
+  "description": "Explicitly approved B2B guest administrators allowed to reach Microsoft admin portals.",
+  "displayName": "MSP-CA-Allow-GuestAdminPortals",
+  "groupTypes": [],
+  "mail": null,
+  "mailEnabled": false,
+  "mailNickname": "mspca-allowguestadminportals",
+  "securityEnabled": true,
+  "visibility": null
+}

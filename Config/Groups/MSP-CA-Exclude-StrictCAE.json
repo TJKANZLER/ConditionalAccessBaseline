@@ -1,0 +1,12 @@
+{
+  "id": "10000000-0000-4000-8000-000000000012",
+  "organizationId": "%OrganizationId%",
+  "description": "Temporary exception from strict-location Continuous Access Evaluation. Keep empty by default.",
+  "displayName": "MSP-CA-Exclude-StrictCAE",
+  "groupTypes": [],
+  "mail": null,
+  "mailEnabled": false,
+  "mailNickname": "mspca-excludecae",
+  "securityEnabled": true,
+  "visibility": null
+}

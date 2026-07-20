@@ -1,0 +1,12 @@
+{
+  "id": "10000000-0000-4000-8000-000000000005",
+  "organizationId": "%OrganizationId%",
+  "description": "Temporary exception for device or security-information registration workflows.",
+  "displayName": "MSP-CA-Exclude-Registration",
+  "groupTypes": [],
+  "mail": null,
+  "mailEnabled": false,
+  "mailNickname": "mspca-excluderegistration",
+  "securityEnabled": true,
+  "visibility": null
+}

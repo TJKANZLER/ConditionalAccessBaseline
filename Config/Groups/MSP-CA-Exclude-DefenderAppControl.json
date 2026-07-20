@@ -1,0 +1,12 @@
+{
+  "id": "10000000-0000-4000-8000-000000000013",
+  "organizationId": "%OrganizationId%",
+  "description": "Temporary exception from Defender for Cloud Apps session controls. Keep empty by default.",
+  "displayName": "MSP-CA-Exclude-DefenderAppControl",
+  "groupTypes": [],
+  "mail": null,
+  "mailEnabled": false,
+  "mailNickname": "mspca-excludecloudappsecurity",
+  "securityEnabled": true,
+  "visibility": null
+}
