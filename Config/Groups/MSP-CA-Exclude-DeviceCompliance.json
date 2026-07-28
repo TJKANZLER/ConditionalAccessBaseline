@@ -1,7 +1,7 @@
 {
   "id": "10000000-0000-4000-8000-000000000006",
   "organizationId": "%OrganizationId%",
-  "description": "Temporary device compliance exception, shared only by CA102, CA302, and CA303. Keep empty by default.",
+  "description": "Temporary device compliance exception, shared only by CA102 and CA302 through CA306. Keep empty by default.",
   "displayName": "MSP-CA-Exclude-DeviceCompliance",
   "groupTypes": [],
   "mail": null,

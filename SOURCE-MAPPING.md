@@ -9,6 +9,7 @@ The suite maps security objectives to explicit production paths by licence and o
 | Directory synchronization | Microsoft hybrid-identity CA guidance and built-in roles | Exclude stable Directory Synchronization Accounts role ID from all-user scopes |
 | Registration | Microsoft registration and TAP guidance | Separate security-info and device-registration policies with TAP as bootstrap |
 | Device-code phishing | Microsoft authentication-flow guidance | Block device-code flow but exclude Entra Device Registration Service |
+| Authentication transfer | Microsoft authentication-flow guidance | Block authentication transfer with a dedicated, empty-by-default exception group |
 | Administrator access | Microsoft phishing-resistant admin policy | Stable privileged roles, phishing-resistant MFA, session hardening, compliant devices |
 | Guest access | Microsoft guest CA guidance | MFA, session hardening, admin-portal block; exclude CIPP/GDAP service providers |
 | Mobile access | Microsoft Intune App Protection and compliance guidance | App Protection for all mobile users plus full compliance for the managed-mobile include group |
@@ -25,7 +26,6 @@ The suite maps security objectives to explicit production paths by licence and o
 
 | Removed area | Reason |
 |---|---|
-| Authentication transfer block | Preview authentication-flow control |
 | Strict-location CAE | Preview session control |
 | Apple token protection | Preview platform support |
 | Agent identity policies | Emerging schema/licensing, not a Business Premium baseline |
@@ -39,6 +39,7 @@ Tenant-specific application IDs, country lists, IP ranges, Terms of Use document
 - [Plan a Conditional Access deployment](https://learn.microsoft.com/en-us/entra/identity/conditional-access/plan-conditional-access)
 - [Conditional Access policy model](https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-conditional-access-policies)
 - [Authentication flows and Device Registration Service exclusion](https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-authentication-flows)
+- [Block device code and authentication transfer flows](https://learn.microsoft.com/en-us/entra/identity/conditional-access/policy-block-authentication-flows)
 - [Require phishing-resistant MFA for administrators](https://learn.microsoft.com/en-us/entra/identity/conditional-access/policy-admin-phish-resistant-mfa)
 - [Block access by location](https://learn.microsoft.com/en-us/entra/identity/conditional-access/policy-block-by-location)
 - [Block unknown or unsupported platforms](https://learn.microsoft.com/en-us/entra/identity/conditional-access/policy-all-users-device-unknown-unsupported)
@@ -48,3 +49,6 @@ Tenant-specific application IDs, country lists, IP ranges, Terms of Use document
 - [Token Protection deployment guide for Windows](https://learn.microsoft.com/en-us/entra/identity/conditional-access/deployment-guide-token-protection-windows)
 - [Microsoft Entra built-in role IDs](https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/permissions-reference)
 - [Conditional Access grant controls](https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-conditional-access-grant)
+- [Protected actions in Microsoft Entra ID](https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/protected-actions-overview)
+- [CIPP named locations](https://docs.cipp.app/user-documentation/tenant/conditional/list-named-locations/add)
+- [CIPP Standards and drift management](https://docs.cipp.app/user-documentation/tenant/standards)

@@ -28,6 +28,7 @@ $ids = [ordered]@{
     ExcludeAll              = '10000000-0000-4000-8000-000000000001'
     ExcludeMfa              = '10000000-0000-4000-8000-000000000002'
     ExcludeDeviceCode       = '10000000-0000-4000-8000-000000000003'
+    ExcludeAuthTransfer     = '10000000-0000-4000-8000-000000000004'
     ExcludeRegistration     = '10000000-0000-4000-8000-000000000005'
     ExcludeCompliance       = '10000000-0000-4000-8000-000000000006'
     ExcludeAppProtection    = '10000000-0000-4000-8000-000000000007'
@@ -46,6 +47,7 @@ $groupNames = [ordered]@{
     ExcludeAll             = 'MSP-CA-Exclude-All-EmergencyAccess'
     ExcludeMfa             = 'MSP-CA-Exclude-MFA-Temporary'
     ExcludeDeviceCode      = 'MSP-CA-Exclude-DeviceCodeFlow'
+    ExcludeAuthTransfer    = 'MSP-CA-Exclude-AuthenticationTransfer'
     ExcludeRegistration    = 'MSP-CA-Exclude-Registration'
     ExcludeCompliance      = 'MSP-CA-Exclude-DeviceCompliance'
     ExcludeAppProtection   = 'MSP-CA-Exclude-AppProtection'
@@ -64,8 +66,9 @@ $groupDescriptions = [ordered]@{
     ExcludeAll             = 'Emergency access accounts only. Membership must be monitored and alerted.'
     ExcludeMfa             = 'Temporary exception for user-based service accounts pending migration. Keep empty by default.'
     ExcludeDeviceCode      = 'Approved identities that have a documented requirement for OAuth device code flow.'
+    ExcludeAuthTransfer    = 'Approved identities that have a documented requirement for authentication transfer. Keep empty by default.'
     ExcludeRegistration    = 'Temporary exception for device or security-information registration workflows.'
-    ExcludeCompliance      = 'Temporary device compliance exception, shared only by CA102, CA302, and CA303. Keep empty by default.'
+    ExcludeCompliance      = 'Temporary device compliance exception, shared only by CA102 and CA302 through CA306. Keep empty by default.'
     ExcludeAppProtection   = 'Temporary Intune App Protection exception. Keep empty by default.'
     AllowGuestAdminPortals = 'Explicitly approved B2B guest administrators allowed to reach Microsoft admin portals.'
     ExcludeRisk            = 'Emergency exception from Entra ID Protection risk remediation. Keep empty by default.'
@@ -316,6 +319,11 @@ $policies += New-Policy -DisplayName 'MSP-CA005-Global-Block-DeviceCodeFlow' `
     -Conditions (New-Conditions -Users (New-UserScope AllHuman -ExcludeGroups @($allGroup, $ids.ExcludeDeviceCode)) `
         -Applications (New-ApplicationsScope -ExcludeApplications @($deviceRegistrationServiceAppId)) `
         -AuthenticationFlows ([ordered]@{ transferMethods = 'deviceCodeFlow' })) `
+    -GrantControls (New-Grant -BuiltInControls @('block'))
+
+$policies += New-Policy -DisplayName 'MSP-CA006-Global-Block-AuthenticationTransfer' `
+    -Conditions (New-Conditions -Users (New-UserScope AllHuman -ExcludeGroups @($allGroup, $ids.ExcludeAuthTransfer)) `
+        -AuthenticationFlows ([ordered]@{ transferMethods = 'authenticationTransfer' })) `
     -GrantControls (New-Grant -BuiltInControls @('block'))
 
 $policies += New-Policy -DisplayName 'MSP-CA007-Global-Block-UnknownOrUnsupportedPlatforms' `

@@ -1,0 +1,30 @@
+name: Validate Conditional Access baseline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Regenerate templates
+        shell: pwsh
+        run: ./tools/New-CippCaBlueprint.ps1
+
+      - name: Validate suite
+        shell: pwsh
+        run: ./tools/Test-CippCaBlueprint.ps1
+
+      - name: Confirm generated files are current
+        shell: pwsh
+        run: git diff --exit-code

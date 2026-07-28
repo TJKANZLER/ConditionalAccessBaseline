@@ -33,6 +33,7 @@ GitHub package membership is documented in `Config/PolicyPackages.psd1`, but CIP
 | Mobile Office app fails | CA300 | App Protection assignment, supported app, broker, and user licensing |
 | Browser can view but cannot download | CA301 | Expected behavior on noncompliant devices; verify app-enforced restrictions |
 | CLI device login fails | CA005 | Replace device-code authentication or use a documented temporary exception |
+| Outlook QR/mobile transfer fails | CA006 | Expected when authentication transfer is blocked; verify whether the workflow has an approved requirement |
 | MFA prompt appears because of risk | CA400 | Confirm P2 licensing and review the exact sign-in risk detection |
 | User is forced through password remediation | CA401 | Review high user-risk evidence, SSPR, and password-writeback health |
 | Service principal is blocked | CA500/CA501 | Review workload risk and the automation source IP |

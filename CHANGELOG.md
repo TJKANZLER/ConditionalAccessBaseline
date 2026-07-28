@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.2.0 — 2026-07-28
+
+- Merged the three trusted-location guardrails into the Core P1 activation package and reduced the suite from six packages to five without removing location protection.
+- Added CA006 to block authentication transfer, now part of Microsoft's advanced-protection rollout guidance, with a dedicated empty-by-default exception group.
+- Expanded the generated suite to 30 Report-only policies and 16 supporting groups.
+- Added validator coverage for the authentication-transfer policy, its block control, and its dedicated exception mapping.
+- Added a peer-baseline comparison and continuous validation workflow.
+- Added a package-by-package acceptance test matrix and explicit `AllTrusted` named-location inventory controls.
+
 ## 3.1.0 — 2026-07-28
 
 - Consolidated nine narrowly split packages into six operational packages aligned to real deployment and licence boundaries.

@@ -45,8 +45,8 @@ foreach ($duplicate in $policies | Group-Object displayName | Where-Object Count
     $errors.Add("Duplicate policy display name: $($duplicate.Name)")
 }
 
-if ($policies.Count -ne 29) {
-    $errors.Add("Expected 29 Conditional Access policies but found $($policies.Count)")
+if ($policies.Count -ne 30) {
+    $errors.Add("Expected 30 Conditional Access policies but found $($policies.Count)")
 }
 
 $migration = Get-Content -LiteralPath $migrationPath -Raw | ConvertFrom-Json -Depth 20
@@ -94,8 +94,8 @@ foreach ($migrationId in $migrationIds) {
     }
 }
 
-if ($groupIds.Count -ne 15) {
-    $errors.Add("Expected 15 supporting groups but found $($groupIds.Count)")
+if ($groupIds.Count -ne 16) {
+    $errors.Add("Expected 16 supporting groups but found $($groupIds.Count)")
 }
 
 foreach ($policy in $policies) {
@@ -158,6 +158,14 @@ if ($deviceRegistrationServiceAppId -notin @($deviceCodePolicy.conditions.applic
     $errors.Add('Device-code blocking does not exclude Microsoft Entra Device Registration Service.')
 }
 
+$authTransferPolicy = $policies | Where-Object displayName -eq 'MSP-CA006-Global-Block-AuthenticationTransfer'
+$authTransferExclusionId = ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-AuthenticationTransfer').id
+if ($authTransferPolicy.conditions.authenticationFlows.transferMethods -ne 'authenticationTransfer' -or
+    $authTransferPolicy.grantControls.builtInControls -notcontains 'block' -or
+    $authTransferExclusionId -notin @($authTransferPolicy.conditions.users.excludeGroups)) {
+    $errors.Add('Authentication-transfer blocking is missing, incorrectly scoped, or lacks its dedicated exception group.')
+}
+
 $deviceComplianceGroupId = ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-DeviceCompliance').id
 $deviceComplianceOwners = @(
     'MSP-CA102-Admins-Require-CompliantDevice'
@@ -209,20 +217,31 @@ if (-not (Test-Path -LiteralPath $packagePath)) {
 else {
     $packageManifest = Import-PowerShellDataFile -LiteralPath $packagePath
     $packages = @($packageManifest.Packages)
-    if ($packages.Count -ne 6) {
-        $errors.Add("Expected six activation packages but found $($packages.Count).")
+    if ($packages.Count -ne 5) {
+        $errors.Add("Expected five activation packages but found $($packages.Count).")
     }
     $expectedPackageNames = @(
         'SHOOTHILL-CA-01-Core-Identity-and-External-Access-P1'
         'SHOOTHILL-CA-02-Privileged-Endpoint-and-App-Protection'
-        'SHOOTHILL-CA-03-Trusted-Location-Guardrails-P1'
-        'SHOOTHILL-CA-04-Identity-Protection-P2'
-        'SHOOTHILL-CA-05-Workload-Identity-Premium'
-        'SHOOTHILL-CA-06-Defender-and-Purview-Advanced'
+        'SHOOTHILL-CA-03-Identity-Protection-P2'
+        'SHOOTHILL-CA-04-Workload-Identity-Premium'
+        'SHOOTHILL-CA-05-Defender-and-Purview-Advanced'
     )
     foreach ($expectedName in $expectedPackageNames) {
         if ($expectedName -notin @($packages.Name)) {
             $errors.Add("Required activation package is missing or renamed: $expectedName")
+        }
+    }
+
+    $corePackage = $packages | Where-Object Name -eq 'SHOOTHILL-CA-01-Core-Identity-and-External-Access-P1'
+    foreach ($requiredCorePolicy in @(
+        'MSP-CA006-Global-Block-AuthenticationTransfer'
+        'MSP-CA009-Registration-Block-Outside-TrustedLocations'
+        'MSP-CA103-Admins-Block-Outside-TrustedLocations'
+        'MSP-CA600-MFAExceptionAccounts-Block-Outside-TrustedLocations'
+    )) {
+        if ($requiredCorePolicy -notin @($corePackage.Policies)) {
+            $errors.Add("Core package is missing foundational policy: $requiredCorePolicy")
         }
     }
 
@@ -253,4 +272,4 @@ if ($errors.Count -gt 0) {
     exit 1
 }
 
-Write-Output "PASS: 29 production policies (all Report-only), 15 groups, six complete capability packages, safe CIPP layout, and validated Microsoft dependencies."
+Write-Output "PASS: 30 production policies (all Report-only), 16 groups, five complete capability packages, safe CIPP layout, and validated Microsoft dependencies."

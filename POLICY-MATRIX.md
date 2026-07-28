@@ -1,15 +1,14 @@
 # Conditional Access policy matrix
 
-All 29 policies start Report-only. Package prerequisites determine applicability; there are no lab templates or disabled placeholders.
+All 30 policies start Report-only. Package prerequisites determine applicability; there are no lab templates or disabled placeholders.
 
 | Package | Policies | Production coverage |
 |---:|---|---|
-| 01 Core Identity and External Access | CA001–CA005, CA200–CA202 | Authentication, registration, device-code, and guest controls |
+| 01 Core Identity and External Access | CA001–CA006, CA009, CA103, CA200–CA202, CA600 | Authentication, registration, authentication-flow, guest, and trusted-location controls |
 | 02 Privileged, Endpoint and App Protection | CA007, CA100–CA102, CA300–CA307 | Administrator, platform, MAM, browser, compliance, and token controls |
-| 03 Trusted Location Guardrails | CA009, CA103, CA600 | Registration, administrator, and MFA-exempt service-account locations |
-| 04 Identity Protection P2 | CA400–CA401 | Sign-in risk MFA and high user-risk remediation |
-| 05 Workload Identity Premium | CA500–CA501 | Service-principal risk and location controls |
-| 06 Defender and Purview | CA309, CA402 | Defender App Control monitoring and insider-risk enforcement |
+| 03 Identity Protection P2 | CA400–CA401 | Sign-in risk MFA and high user-risk remediation |
+| 04 Workload Identity Premium | CA500–CA501 | Service-principal risk and location controls |
+| 05 Defender and Purview | CA309, CA402 | Defender App Control monitoring and insider-risk enforcement |
 
 ## Exact policies
 
@@ -20,6 +19,7 @@ All 29 policies start Report-only. Package prerequisites determine applicability
 | CA003 | Require MFA for security-info registration | Temporary Access Pass |
 | CA004 | Require MFA for device registration | Enrollment testing |
 | CA005 | Block device-code flow | CLI and Teams-device inventory |
+| CA006 | Block authentication transfer | Outlook/mobile transfer workflow inventory |
 | CA007 | Block unknown or unsupported platforms | Supported-platform decision |
 | CA009 | Block security-info registration outside trusted locations | Trusted registration paths |
 | CA100 | Require phishing-resistant MFA for admins | Resistant methods for 14 recommended roles |
@@ -47,4 +47,4 @@ All 29 policies start Report-only. Package prerequisites determine applicability
 
 ## Deliberate exclusions
 
-Authentication transfer blocking, strict-location CAE, Apple token protection, and Agent ID controls remain excluded while preview. The hybrid-join and mobile alternatives were replaced by one declared production model. Sensitive-action authentication context was removed because it is inert until tenant-specific PIM/application wiring exists.
+Strict-location CAE, Apple token protection, and Agent ID controls remain excluded while preview. The hybrid-join and mobile alternatives were replaced by one declared production model. Sensitive-action authentication context was removed because it is inert until tenant-specific PIM/application wiring exists.
