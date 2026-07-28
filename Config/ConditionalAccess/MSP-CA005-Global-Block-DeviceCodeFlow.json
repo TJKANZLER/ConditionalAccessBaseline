@@ -3,9 +3,6 @@
   "displayName": "MSP-CA005-Global-Block-DeviceCodeFlow",
   "state": "enabledForReportingButNotEnforced",
   "conditions": {
-    "userRiskLevels": [],
-    "signInRiskLevels": [],
-    "servicePrincipalRiskLevels": [],
     "clientAppTypes": [
       "all"
     ],
@@ -19,7 +16,9 @@
       "includeApplications": [
         "All"
       ],
-      "excludeApplications": [],
+      "excludeApplications": [
+        "01cb2876-7ebd-4aa4-9cc9-d28bd4d359a9"
+      ],
       "includeUserActions": [],
       "includeAuthenticationContextClassReferences": [],
       "applicationFilter": null
@@ -35,7 +34,9 @@
         "10000000-0000-4000-8000-000000000003"
       ],
       "includeRoles": [],
-      "excludeRoles": [],
+      "excludeRoles": [
+        "d29b2b05-8046-44ba-8758-1e26182fcf32"
+      ],
       "includeGuestsOrExternalUsers": null,
       "excludeGuestsOrExternalUsers": {
         "@odata.type": "#microsoft.graph.conditionalAccessGuestsOrExternalUsers",
@@ -45,10 +46,7 @@
           "membershipKind": "all"
         }
       }
-    },
-    "clientApplications": null,
-    "agents": null,
-    "agentContext": null
+    }
   },
   "grantControls": {
     "operator": "OR",

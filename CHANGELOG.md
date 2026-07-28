@@ -1,5 +1,22 @@
 # Changelog
 
+## 3.0.0 — 2026-07-28
+
+- Rebuilt the library as a deterministic, licence-aware production suite: 30 Report-only policies and 15 supporting groups.
+- Added nine descriptive, non-overlapping capability packages with machine-validated membership and readiness gates.
+- Retained trusted-location enforcement as a separately controlled package rather than an optional/lab template.
+- Removed preview controls, P2/Purview/Defender for Cloud Apps/Workload ID Premium policies, inert scaffolding, and mutually exclusive device alternatives.
+- Excluded the stable Directory Synchronization Accounts role from all-user scopes.
+- Excluded Microsoft Entra Device Registration Service from CA005 so device-code blocking does not break device registration.
+- Added Microsoft Teams Services to the supported Windows token-protection resource scope.
+- Aligned CA100, CA101, and CA102 to Microsoft's current 14-role administrator protection set instead of carrying unrelated framework-specific roles.
+- Restored generally available production coverage for unsupported platforms, managed mobile and Linux compliance, Entra ID Protection risk remediation, workload identities, Defender App Control, and Purview insider risk.
+- Added trusted-location guardrails for administrator access, security-info registration, and MFA-exempt user service accounts.
+- Changed guest MFA to the interoperable MFA grant instead of authentication strength so email OTP, SAML/WS-Fed, and Google-federated guests remain supported.
+- Removed preview-only condition fields from generated production payloads.
+- Expanded validation to enforce Report-only state, complete package coverage, role/app exclusions, supported token resources, and absence of preview schema.
+- Rewrote deployment, operator, troubleshooting, and source-mapping documentation around repeatable CIPP package rollout.
+
 ## 2.1.0 — 2026-07-20
 
 - Gave CA007 (unknown-platform block) and CA301 (unmanaged-browser download restriction) their own dedicated exception groups (`MSP-CA-Exclude-UnknownPlatforms`, `MSP-CA-Exclude-UnmanagedBrowser`) instead of reusing `MSP-CA-Exclude-DeviceCompliance`, so a device-compliance exception can no longer silently bypass an unrelated control.

@@ -1,101 +1,57 @@
-# Policy guide — plain English
+# Operator policy guide
 
-What each policy actually does to a real user, and what tends to go wrong when you flip it from Report-only/Disabled to On. Read this alongside [POLICY-MATRIX.md](POLICY-MATRIX.md) (scope/dependencies) and [DEPLOYMENT.md](DEPLOYMENT.md) (rollout order) — this doc is the "what will the helpdesk phone ring about" reference.
+All policies begin Report-only. Promote a package only after its readiness gate in `Config/PolicyPackages.psd1` is satisfied.
 
-Every policy below excludes `MSP-CA-Exclude-All-EmergencyAccess`. That's not repeated per row.
+## 01 — Identity Foundation P1
 
----
+Deploy to every managed P1 tenant. It blocks legacy authentication and device-code phishing, requires MFA, and protects security-info/device registration. CA005 excludes Device Registration Service. TAP is the supported registration bootstrap.
 
-## Foundation (CA001–CA008)
+Main risks: unregistered users, legacy scanners/apps, CLI device-code workflows, and user-based service accounts. Migrate service accounts; any temporary MFA exception is automatically constrained by CA600 when the location package is enabled.
 
-| Policy | What it does | Expected issues | Solutions |
-|---|---|---|---|
-| **CA001** — Block legacy authentication | Refuses sign-in from old protocols that can't do MFA at all — POP, IMAP, older Outlook clients, Exchange ActiveSync on ancient phone mail apps. If an app can't prompt for MFA, it's blocked outright, no exceptions. | A copier/scanner or an old accounting package sending mail via IMAP/SMTP with a stored password just stops working, silently, until someone notices invoices aren't arriving. Old Android/iOS native mail apps (not Outlook) doing ActiveSync also break. | Run Report-only for at least 2 weeks and check the sign-in log's "Client app" column for real legacy-auth usage before enabling. Migrate scanners/apps to modern auth or an app password equivalent (SMTP AUTH client submission with a dedicated account, not IMAP). There's no exception group by design — fix the client, don't carve an exception. |
-| **CA002** — Require MFA (internal users) | Every internal (non-guest) sign-in needs MFA, everywhere, on every app. | Anyone not yet registered for MFA gets locked out the moment this goes live. Break/fix and monitoring service accounts that sign in as a "real" user (not an app registration) can't complete MFA and grind to a halt. | Complete MFA registration for all humans before enforcing (Report-only surfaces who hasn't registered). For legacy service accounts, add them to `MSP-CA-Exclude-MFA-Temporary` as a named, tracked exception while migrating them to a managed identity or app registration — that group is a "pending migration" bucket, not a permanent fix. |
-| **CA003** — Protect security-info registration | Requires MFA before someone can add or change their own MFA methods (phone number, authenticator app, etc.). | A brand-new user with no MFA methods yet can't register a first method, because registering needs MFA, which they don't have yet — classic bootstrap deadlock. | Use a Temporary Access Pass (TAP) for new-starter onboarding — TAP satisfies the MFA requirement so the user can register their real method. `MSP-CA-Exclude-Registration` is a documented, time-boxed exception if TAP isn't set up yet; don't leave anyone in it permanently. |
-| **CA004** — Protect device registration/join | Requires MFA before a device can be registered or Azure AD/Entra-joined. | Same bootstrap problem as CA003 if a new device is being set up for a user who hasn't got MFA yet, or during Autopilot/OOBE flows that expect a smoother sign-in. | Same TAP-based bootstrap as CA003. Test Autopilot/enrollment end-to-end in Report-only before enforcing — some enrollment flows re-prompt for auth mid-process and this is where it surfaces. |
-| **CA005** — Block device-code flow | Blocks the "go to microsoft.com/devicelogin and enter this code" sign-in flow — abused heavily in phishing kits, but also how legitimate CLI tools (Azure CLI, `az login`, some Graph PowerShell flows) sign in on devices without a browser. | IT admins and any automation using `az login --use-device-code`, older Graph PowerShell auth, or CLI tools on headless/server boxes suddenly can't authenticate. | Inventory CLI/automation device-code usage before enforcing (Report-only shows this). Move scripts to a service principal with certificate/secret auth where possible. For a genuine ongoing need, add the identity to `MSP-CA-Exclude-DeviceCodeFlow` — kept empty by default; each addition should be a documented, reviewed decision. |
-| **CA006** — Block authentication transfer | Blocks the newer "scan this QR code on your phone to sign in on this PC" flow, another vector abused in phishing. | Low — a newer feature most orgs aren't relying on yet. Some newer mobile-to-desktop Outlook/Teams onboarding flows use it. | Test mobile onboarding flows in Report-only first. `MSP-CA-Exclude-AuthenticationTransfer` is the exception group if a specific workflow needs it — keep it empty otherwise. |
-| **CA007** — Block unknown platforms *(Disabled)* | Only lets Windows, macOS, iOS, Android, and Linux through; everything else (ChromeOS, unusual embedded browsers, platform spoofing) gets blocked. | The platform signal comes from the user agent string, which is trivially spoofable — a soft control, not a hard boundary. Client bases with ChromeOS devices (Chromebooks) get blocked outright since ChromeOS isn't a recognized platform. | Decide how ChromeOS/other platforms are handled *before* enabling — accept them intentionally, or don't enable for that tenant. Use `MSP-CA-Exclude-UnknownPlatforms` for a documented, narrow exception, not a general safety net. |
-| **CA008** — Block outside trusted locations *(Disabled)* | Only allows sign-in from IP ranges/countries explicitly marked "trusted" in Entra Named Locations; everything else is blocked. | **Highest blast radius in the library.** If *no* named locations are marked trusted when this goes live, it blocks *everyone, everywhere* — including admins. Remote/hybrid workers, home broadband with dynamic IPs, and mobile data commonly fall outside a naive office-IP-only list. | Build and verify the complete trusted-location list first — every office, remote-work egress path, and VPN/ZTNA exit IP — and test from each before enabling. Never enable in the same change window as anything else. `MSP-CA-Exclude-LocationPolicies` for a genuine, reviewed traveling-user exception. |
+## 02 — Privileged Access P1/Intune
 
----
+Targets Microsoft's current 14 recommended administrator roles with phishing-resistant MFA, 12-hour reauthentication/no persistent browser, and compliant Windows/macOS workstations.
 
-## Administrators (CA100–CA104)
+Main risk: admin lockout. Register resistant methods and validate two cloud-only emergency accounts before enforcement.
 
-| Policy | What it does | Expected issues | Solutions |
-|---|---|---|---|
-| **CA100** — Require phishing-resistant MFA for admins | Anyone holding one of ~24 privileged roles (Global Admin, Security Admin, Exchange Admin, etc.) must use a phishing-resistant method — Windows Hello for Business, a physical FIDO2 key/passkey, or a certificate — not just any MFA. | Admins who've only ever registered Authenticator push notifications get locked out of their own admin roles the moment this enforces, possibly locking themselves out of fixing it. | Every admin needs a phishing-resistant method registered *before* this goes to On — budget FIDO2/WHfB rollout as a real project. Verify at least one working emergency-access account is excluded and tested from a clean browser before enforcing on anyone else. |
-| **CA101** — Harden admin sessions | Admins get re-prompted for MFA every 12 hours and their browser never "stays signed in" — closing the browser ends the session. | Admins doing long stretches of portal work get logged out mid-task and lose unsaved work. | Mostly a training/expectation issue — tell admins up front. Low technical risk; no real workaround needed beyond re-authenticating. |
-| **CA102** — Require compliant device for admins *(Disabled)* | Admin accounts can only be used from an Intune-managed, compliant device — no admin work from a personal laptop or unmanaged machine, even with MFA. | Locks out any admin whose "admin machine" isn't Intune-enrolled yet, or whose device has drifted out of compliance (missed update, encryption toggled off) without them realizing. | Enroll and confirm compliance for every privileged workstation *before* enabling — this should be one of the last CA policies turned on for admins. `MSP-CA-Exclude-DeviceCompliance` is shared with CA302-306/CA310; know that before reaching for it as a quick fix. |
-| **CA103** — Strict-location CAE for admins *(Disabled)* | Re-checks an admin's network location in near-real-time via Continuous Access Evaluation — moving networks mid-session cuts it immediately instead of waiting for token expiry. | Admins on unstable connections (mobile hotspot, flaky home Wi-Fi, VPN reconnecting) get logged out repeatedly, which reads as "CIPP/Entra is broken." | Depends entirely on trusted named locations being accurate (same prerequisite as CA008) — build that first. Test through a real network-change scenario before enforcing. `MSP-CA-Exclude-StrictCAE` for constantly-traveling admins. |
-| **CA104** — Reauthenticate for sensitive actions *(Disabled)* | For a specific set of high-risk actions (via the "MSP Sensitive Action" authentication context — e.g., PIM role activation), demands fresh phishing-resistant MFA every time, regardless of recent sign-in. | Does nothing at all until the authentication context is wired up to PIM or specific applications in the target tenant — inert scaffolding out of the box. | Two-step deployment: import the policy (CIPP auto-creates the auth context), *then* attach it to PIM role-activation settings or the relevant app. Verify it's actually being evaluated (check the sign-in log) before assuming it's protecting anything. |
+## 03 — External Collaboration P1
 
----
+Requires guest MFA, hardens guest sessions, and blocks ordinary guests from Microsoft admin portals. CIPP/GDAP service-provider identities are excluded. Legitimate guest administrators belong in the explicit allow group.
 
-## Guests (CA200–CA202)
+## 04 — Endpoint and App Protection
 
-| Policy | What it does | Expected issues | Solutions |
-|---|---|---|---|
-| **CA200** — Require MFA for guests | Same idea as CA002 but for external/guest users collaborating via Teams or SharePoint. | External partners who've never had to do MFA for your tenant before suddenly can't get in, and may have no easy path to register a method since they're not "your" user. | Warn active guest collaborators before enforcing. Most guests already have MFA from their *home* tenant and just need to complete it when challenged — guests from weakly-secured tenants can be a real blocker worth a heads-up email. |
-| **CA201** — Harden guest sessions | Same as CA101 (12-hour re-auth, no persistent browser) but for guests. | Low — guests re-prompted for auth periodically during long collaboration sessions. | None really needed; low-risk to enable. |
-| **CA202** — Block ordinary guests from admin portals | Guests use Teams/SharePoint normally, but can't reach Entra, M365 admin center, or other Microsoft admin portals unless in the explicit allow-list group. | Breaks access for any legitimate outsourced/partner admin (e.g., a specialist consultant with a guest account) not yet in the allow group. | Identify every legitimate external admin *before* enabling and add them to `MSP-CA-Allow-GuestAdminPortals` first. Low-risk to enable broadly — the failure mode (an unexpected external admin) is exactly what's worth catching. |
+- CA007 blocks platforms outside Windows, macOS, Linux, iOS, and Android.
+- CA300 requires Intune App Protection for Microsoft 365 mobile apps.
+- CA301 limits Exchange/SharePoint downloads from noncompliant browsers.
+- CA302/303 require compliant Windows/macOS native clients.
+- CA304/305 add full compliance for users in the managed-mobile include group.
+- CA306 covers supported Intune Linux devices.
+- CA307 binds supported Windows native-client tokens for Exchange, SharePoint, and Teams Services.
 
----
+Main risks: unenrolled devices, unsupported applications, ChromeOS, stale clients, and missing platform compliance policies. Populate `MSP-CA-Include-ManagedMobileDeviceCompliance` only for users whose mobile devices are organization-managed.
 
-## Devices and sessions (CA300–CA310)
+## 05 — Trusted Location Guardrails
 
-| Policy | What it does | Expected issues | Solutions |
-|---|---|---|---|
-| **CA300** — Require App Protection for mobile Office apps | On phones/tablets (Android/iOS), Office 365 apps must be wrapped in an Intune App Protection Policy (controls copy/paste, save-to-personal-storage, etc.) — the device itself doesn't need to be enrolled. | Users on personal phones who've never had App Protection applied suddenly can't open email/Teams/OneDrive on mobile until the policy syncs. | Deploy the actual Intune App Protection policies *before* this CA policy enforces — CA300 only checks protection is applied, it doesn't create it. Warn mobile users of a possible short first-time delay. |
-| **CA301** — Restrict downloads from unmanaged browsers | Exchange/SharePoint opened in a plain browser (not managed device, not the app) is view-only — no download, print, or sync. | Users legitimately checking webmail from a home PC or public machine can't download an attachment they need, with no obvious error explaining why. | Generally *intended* behavior for unmanaged devices — mostly a communication issue. `MSP-CA-Exclude-UnmanagedBrowser` is its own dedicated exception group (not shared with the compliant-device policies) for a genuinely documented case. |
-| **CA302** — Require compliant Windows device | Windows PCs must be Intune-managed and passing compliance checks (encryption, patch level, etc.) to access anything — the strongest, most common device control here. | **Biggest single source of lockouts in the whole rollout** — any PC not enrolled, or enrolled but non-compliant, loses access entirely, including the person trying to fix it. | Full Intune compliance rollout and verification across every Windows device *before* enabling — one of the last policies to turn on, not one of the first. Hybrid Azure AD join environments should use **CA310** instead. |
-| **CA303** — Require compliant macOS device | Same as CA302, for Macs. | Same lockout risk as CA302, plus Mac-specific gotchas: Platform SSO / Apple SSO extension misconfiguration can strand users in an auth loop. | Confirm Apple SSO extension deployment and Mac Intune compliance profiles work *before* enabling, same discipline as CA302. |
-| **CA304 / CA305** — Compliant iOS/Android device, alternatives *(Disabled)* | Stricter alternative to CA300 — requires the whole *device* enrolled and compliant, for iOS/Android respectively, instead of just wrapping the app. | Enabling alongside CA300 without realizing they're alternatives forces users to satisfy *both* app protection *and* full device enrollment — much more friction than intended. | Pick one model per tenant — App Protection (CA300, default) or full device compliance (CA304/305) — not both. Only use these for customers wanting full MDM control over mobile devices. |
-| **CA306** — Require compliant Linux device *(Disabled)* | Same idea as CA302/303 but for Linux desktops. | Intune's Linux support is newer and narrower than Windows/Mac — check exactly which distros/versions are actually supported. | Only enable for tenants with a known, small, Intune-supported Linux fleet; verify enrollment end-to-end first. |
-| **CA307** — Require token protection (Windows) | Ties the sign-in token to the specific device for Windows apps talking to Exchange/SharePoint, so a stolen token can't be replayed elsewhere — real defense against AiTM phishing token theft. | Only works with specific, up-to-date native clients (current Outlook/OneDrive on registered devices) — older client versions or unregistered devices get blocked from those apps. | Check client versions and device-registration status in Report-only before enforcing. `MSP-CA-Exclude-TokenProtection` is the escape hatch for a specific compatibility issue under investigation. |
-| **CA308** — Require token protection (Apple, Preview) *(Disabled)* | Same idea as CA307, extended to iOS/macOS — still a Microsoft preview feature. | Preview-feature instability; needs MDM plus Enterprise SSO/Platform SSO configured correctly, a nontrivial Apple-side deployment on its own. | Don't enable unless the customer has explicitly accepted using a preview feature, and only after Platform SSO is confirmed working. |
-| **CA309** — Monitor M365 browser sessions (Defender App Control) *(Disabled)* | Routes M365 browser sessions through Defender for Cloud Apps for monitoring — currently observe-only, blocks nothing. | Requires the Defender for Cloud Apps integration actually set up in the tenant; without it, this policy effectively does nothing. | Confirm Defender for Cloud Apps licensing and session-controls integration are live before enabling, even though it's monitor-only and low-risk. |
-| **CA310** — Compliant OR hybrid-joined Windows device, alternative *(Disabled)* | Softer version of CA302 for environments relying on traditional on-prem AD + hybrid Azure AD join rather than full Intune management. | If enabled *alongside* CA302 they don't conflict (same `compliantDevice` control), but running CA310 without ever having CA302 gives weaker assurance — a hybrid-joined-but-poorly-maintained PC still gets in. | Use instead of CA302, not in addition, for tenants genuinely not on full Intune compliance. Treat as a stopgap — direction of travel should be toward CA302. |
+CA009 restricts security-info registration, CA103 restricts administrators, and CA600 constrains MFA-exempt user service accounts. This is the normal location package.
 
----
+Every admin, registration, VPN/ZTNA, service-account, and recovery egress must be marked trusted. Remote ordinary users remain productive.
 
-## Risk-based (CA400–CA402)
+## 06 — Closed Network Perimeter
 
-| Policy | What it does | Expected issues | Solutions |
-|---|---|---|---|
-| **CA400** — Medium/high sign-in risk requires MFA every time | When Identity Protection flags a specific *sign-in* as risky (impossible travel, anonymous IP, leaked credential match), that sign-in must complete MFA every time, regardless of recent auth. | False positives — a traveling user, or one on a new/unusual network, gets an unexpected MFA challenge. Requires Entra ID P2 or Entra Suite licensing to function at all. | Confirm P2/Entra Suite licensing before relying on this. Mostly self-solving — the real risk is a licensing gap silently making the policy a no-op, so verify Identity Protection is actually generating risk signals. |
-| **CA401** — High user risk requires remediation | When Identity Protection flags the *user* (not just one sign-in) as high risk — likely compromised — it requires Microsoft's self-service risk remediation (secure password reset), not just MFA. | A user who's actually just a false positive (shared/kiosk account, unusual-but-legitimate travel) gets forced through a full remediation flow, disruptive and confusing without warning. | Have a documented help-desk process for "user says they got locked out for risk" *before* enabling. `MSP-CA-Exclude-RiskPolicies` is for genuine emergency exceptions only, reviewed immediately. |
-| **CA402** — Block elevated insider risk *(Disabled)* | Blocks access entirely for users flagged as elevated insider risk by Purview Adaptive Protection (e.g., signals suggesting data theft ahead of resignation). | People/HR-sensitive control, not just technical — a wrongly blocked employee is a serious, visible incident, and insider-risk false positives aren't rare. | Needs Purview Adaptive Protection properly tuned and HR/legal sign-off on process *before* this is anything other than Disabled. Have a clear escalation path that doesn't route through a confused helpdesk tech. |
+CA008 blocks every human sign-in outside `AllTrusted`. Use only for office-only or always-on VPN/ZTNA tenants. It is not part of a normal remote-work deployment and must be enforced as a standalone change.
 
----
+## 07 — Identity Protection P2
 
-## Workload identities (CA500–CA501)
+CA400 requires MFA every time for medium/high sign-in risk. CA401 requires high user-risk remediation. Confirm P2 licensing, SSPR, password writeback for hybrid users, and a tested risk-response process.
 
-| Policy | What it does | Expected issues | Solutions |
-|---|---|---|---|
-| **CA500** — Block high-risk workload identities | Blocks service principals/app registrations that Identity Protection flags as high risk (leaked credentials, unusual sign-in pattern for an app). | Requires Workload Identities Premium licensing. A flagged-but-legitimate automation (script from a new but valid location) could get blocked. | Confirm licensing first. Review flagged service principals before assuming compromise — investigate, don't blindly re-enable. |
-| **CA501** — Block workload identities outside trusted locations *(Disabled)* | Same idea as CA008, for service principals — only allows app/service sign-ins from trusted IP ranges. | Same "block everyone if the list is wrong" risk as CA008, applied to automation — potentially worse, since a blocked job might fail silently overnight unwatched. | Same discipline as CA008: complete and verify the trusted-location list, including every legitimate cloud service/CI egress IP, before enabling. Monitor the first few runs closely. |
+## 08 — Workload Identity Premium
 
----
+CA500 blocks high-risk tenant-owned service principals. CA501 blocks them outside trusted locations. Inventory automation, CI/CD, Azure, third-party hosting, and disaster-recovery egress before enforcement.
 
-## Agent identities (CA700–CA704, all Preview, Disabled)
+## 09 — Defender and Purview Advanced
 
-These target Microsoft's emerging "Agent 365"/AI agent identity surface. Everything here is genuinely new (Microsoft preview), so treat all of it with extra caution.
+CA309 routes Microsoft 365 browser sessions through Defender App Control in monitor mode. CA402 blocks elevated Purview insider risk. Deploy only after the integrations and licensing are live; CA402 also requires HR/legal governance and an incident path.
 
-| Policy | What it does | Expected issues | Solutions |
-|---|---|---|---|
-| **CA700** — Block high-risk agent identities | Blocks AI agents that Microsoft's risk signals flag as compromised or behaving suspiciously. | Preview feature — behavior, licensing, and the exact risk signals it relies on may still change. | Don't enable for a customer without their explicit, informed sign-off that they're using a preview capability that could change under them. |
-| **CA701** — Block all agent identities from agent resources | Deny-by-default — no agent reaches agent-specific resources unless explicitly permitted elsewhere. | If a customer *is* using agents for something real, this blocks all of it until permitted agents are explicitly defined. | Only enable after deciding exactly which agents should be allowed and building that allow path first — lock the door before handing out keys, not after. |
-| **CA702** — Require compliant device for endpoint-hosted agent users | If an agent's actions are initiated from a user's endpoint, that device must be compliant — same idea as CA302 for the agent-on-behalf-of-user scenario. | Depends entirely on the endpoint already being Intune-managed and compliant (same prerequisite as CA302) — fails immediately if not. | Don't enable ahead of CA302/general device compliance being solid for that tenant. |
-| **CA703** — Block risky agent-user sessions | Blocks agent sessions where Microsoft's agent-risk signals indicate medium or higher risk. | Preview risk signals — false-positive rate and tuning are unknowns this early. | Watch it closely if enabled; treat any block as worth investigating rather than assumed-correct, given how new this signal is. |
-| **CA704** — Restrict agent users to trusted locations | Same idea as CA008/CA501 for agent-initiated sessions — only allowed from trusted network locations. | Same trusted-location-list dependency and same "block everything if the list is wrong" risk as CA008/CA501. | Same discipline: complete and verify the trusted-location list first, and don't enable in the same window as CA008/CA501 so you can tell which policy caused a problem. |
+## Exception rule
 
----
-
-## Cross-cutting issues that show up regardless of which policy you're enabling
-
-- **"It worked five minutes ago"** — Conditional Access changes can take a few minutes to propagate, and browser/app token caching can delay when a user actually feels the effect. Don't assume a policy did nothing just because a test didn't immediately show the expected block.
-- **Stacking Report-only policies hides real impact** — a Report-only policy shows what *it* would have done, but doesn't show interaction effects with policies already On. Enable in the phased order in DEPLOYMENT.md, not all at once.
-- **Emergency-access accounts must be tested from a clean, private browser session** after *every* new policy goes to On — a cached session can mask a break that would otherwise lock out the one account meant to prevent lockouts.
-- **CIPP template re-deployment doesn't touch tenant-side exclusion group membership** — updating a template and redeploying will not add/remove anyone from `MSP-CA-Exclude-*` groups; those are managed directly in the tenant, not through the template.
+Every exception needs an owner, approver, affected policy, reason, expiry, remediation action, and review date. Emergency access is not a general exception mechanism.

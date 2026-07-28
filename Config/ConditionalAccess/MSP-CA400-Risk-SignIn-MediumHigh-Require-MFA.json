@@ -3,12 +3,6 @@
   "displayName": "MSP-CA400-Risk-SignIn-MediumHigh-Require-MFA",
   "state": "enabledForReportingButNotEnforced",
   "conditions": {
-    "userRiskLevels": [],
-    "signInRiskLevels": [
-      "medium",
-      "high"
-    ],
-    "servicePrincipalRiskLevels": [],
     "clientAppTypes": [
       "all"
     ],
@@ -37,7 +31,9 @@
         "10000000-0000-4000-8000-000000000002"
       ],
       "includeRoles": [],
-      "excludeRoles": [],
+      "excludeRoles": [
+        "d29b2b05-8046-44ba-8758-1e26182fcf32"
+      ],
       "includeGuestsOrExternalUsers": null,
       "excludeGuestsOrExternalUsers": {
         "@odata.type": "#microsoft.graph.conditionalAccessGuestsOrExternalUsers",
@@ -48,9 +44,10 @@
         }
       }
     },
-    "clientApplications": null,
-    "agents": null,
-    "agentContext": null
+    "signInRiskLevels": [
+      "medium",
+      "high"
+    ]
   },
   "grantControls": {
     "operator": "AND",

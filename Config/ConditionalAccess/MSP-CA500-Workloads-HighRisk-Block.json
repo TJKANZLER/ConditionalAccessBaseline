@@ -3,11 +3,6 @@
   "displayName": "MSP-CA500-Workloads-HighRisk-Block",
   "state": "enabledForReportingButNotEnforced",
   "conditions": {
-    "userRiskLevels": [],
-    "signInRiskLevels": [],
-    "servicePrincipalRiskLevels": [
-      "high"
-    ],
     "clientAppTypes": [
       "all"
     ],
@@ -25,14 +20,15 @@
       "applicationFilter": null
     },
     "users": null,
+    "servicePrincipalRiskLevels": [
+      "high"
+    ],
     "clientApplications": {
       "includeServicePrincipals": [
         "ServicePrincipalsInMyTenant"
       ],
       "excludeServicePrincipals": []
-    },
-    "agents": null,
-    "agentContext": null
+    }
   },
   "grantControls": {
     "operator": "OR",

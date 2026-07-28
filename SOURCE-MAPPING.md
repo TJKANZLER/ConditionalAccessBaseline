@@ -1,26 +1,50 @@
-# Source mapping and policy decisions
+# Source mapping and design decisions
 
-This repository does not concatenate frameworks. It maps their objectives, removes duplicate enforcement, modernizes retired controls, and keeps dependency-heavy controls as Disabled modules.
+The suite maps security objectives to explicit production paths by licence and operating capability. It does not concatenate frameworks or retain inert examples.
 
-| Objective | Sources reviewed | Blueprint decision |
+| Objective | Primary guidance | Baseline decision |
 |---|---|---|
-| Legacy authentication | Microsoft, j0eyv, ITProMentor, AlexFilipin | One all-human block policy |
-| Human MFA | Microsoft, j0eyv, ITProMentor, AlexFilipin | One internal-user authentication-strength policy plus a dedicated guest policy |
-| Administrator protection | Microsoft, j0eyv, AlexFilipin | Phishing-resistant MFA, session hardening, and optional compliant-device/CAE/step-up modules |
-| Registration and authentication flows | Microsoft, j0eyv, ITProMentor | Separate security-info, device-registration, device-code, and authentication-transfer policies |
-| Platform restriction | Microsoft, j0eyv | Unknown-platform block included Disabled because the platform signal is mutable |
-| Location restriction | Microsoft, j0eyv | Portable `AllTrusted` scaffolding included Disabled; customer countries/IPs remain tenant data |
-| Guest access | Microsoft, j0eyv, ITProMentor | Dedicated MFA/session policies and admin-portal block; service-provider identities omitted |
-| Mobile access | Microsoft, j0eyv, ITProMentor | App Protection is primary; compliant-device policies are Disabled alternatives |
-| Desktop compliance | Microsoft, j0eyv, ITProMentor, AlexFilipin | Separate Windows, macOS, and optional Linux policies; a Disabled hybrid-Azure-AD-join alternative (CA310) covers environments not fully on Intune compliance |
-| Unmanaged browser | Microsoft, j0eyv, ITProMentor | Exchange/SharePoint app-enforced restrictions |
-| Token protection | Microsoft | Supported Exchange/SharePoint native-client scope; Windows Report-only and Apple Preview Disabled |
-| Defender session control | Microsoft | Monitor-only browser template included Disabled pending Defender integration |
-| Sign-in and user risk | Microsoft, j0eyv, AlexFilipin | MFA-every-time and 2026 `riskRemediation`; no blanket user-risk block |
-| Insider risk | Microsoft and Purview | Elevated-risk block included Disabled pending Adaptive Protection and governance approval |
-| Workload identities | Microsoft | High-risk and trusted-location policies using the portable all-service-principals selector |
-| Agent identities | Microsoft, j0eyv | Five non-overlapping Preview templates included Disabled |
-| Service accounts | Microsoft | No normalized user-service-account persona; migrate to workload identities or managed identities |
-| Terms of Use and selected apps | Microsoft | Not fabricated because document and application IDs are tenant-specific |
+| Legacy authentication | Microsoft Conditional Access templates | One all-human block policy |
+| Internal MFA | Microsoft Zero Trust and CA planning | One all-resource authentication-strength policy |
+| Directory synchronization | Microsoft hybrid-identity CA guidance and built-in roles | Exclude stable Directory Synchronization Accounts role ID from all-user scopes |
+| Registration | Microsoft registration and TAP guidance | Separate security-info and device-registration policies with TAP as bootstrap |
+| Device-code phishing | Microsoft authentication-flow guidance | Block device-code flow but exclude Entra Device Registration Service |
+| Administrator access | Microsoft phishing-resistant admin policy | Stable privileged roles, phishing-resistant MFA, session hardening, compliant devices |
+| Guest access | Microsoft guest CA guidance | MFA, session hardening, admin-portal block; exclude CIPP/GDAP service providers |
+| Mobile access | Microsoft Intune App Protection and compliance guidance | App Protection for all mobile users plus full compliance for the managed-mobile include group |
+| Desktop access | Microsoft Intune compliance guidance | Separate Windows, macOS, and Linux compliance policies |
+| Unmanaged browser | Microsoft app-enforced restrictions | Restrict Exchange/SharePoint downloads on noncompliant devices |
+| Token replay | Microsoft Token Protection guidance | Windows GA only; Exchange, SharePoint, and Microsoft Teams Services native clients |
+| Network boundary | Microsoft location-based CA guidance | Normal guardrails for admins/registration/service accounts plus an isolated closed-network perimeter |
+| Identity risk | Microsoft Entra ID Protection | Separate sign-in and user-risk remediation policies in a P2 package |
+| Workload identities | Microsoft workload Conditional Access | Risk and location controls in a Workload ID Premium package |
+| Advanced sessions and risk | Microsoft Defender for Cloud Apps and Purview | Defender monitoring and insider-risk enforcement in an integration-gated package |
+| Emergency access | Microsoft emergency-access guidance | Dedicated group excluded from every human policy |
 
-Conditional Access evaluates every applicable policy. Stronger administrator and device controls therefore layer intentionally, while alternative mobile controls and global location boundaries remain Disabled until a customer makes the corresponding architecture decision.
+## Deliberately excluded
+
+| Removed area | Reason |
+|---|---|
+| Authentication transfer block | Preview authentication-flow control |
+| Strict-location CAE | Preview session control |
+| Apple token protection | Preview platform support |
+| Agent identity policies | Emerging schema/licensing, not a Business Premium baseline |
+| Hybrid-join alternative | Weaker parallel design that made deployment nondeterministic |
+| Sensitive-action authentication context | Inert until tenant-specific PIM/application wiring exists |
+
+Tenant-specific application IDs, country lists, IP ranges, Terms of Use documents, and permanent exceptions are not fabricated. They remain tenant configuration with explicit ownership.
+
+## Primary references
+
+- [Plan a Conditional Access deployment](https://learn.microsoft.com/en-us/entra/identity/conditional-access/plan-conditional-access)
+- [Conditional Access policy model](https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-conditional-access-policies)
+- [Authentication flows and Device Registration Service exclusion](https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-authentication-flows)
+- [Require phishing-resistant MFA for administrators](https://learn.microsoft.com/en-us/entra/identity/conditional-access/policy-admin-phish-resistant-mfa)
+- [Block access by location](https://learn.microsoft.com/en-us/entra/identity/conditional-access/policy-block-by-location)
+- [Block unknown or unsupported platforms](https://learn.microsoft.com/en-us/entra/identity/conditional-access/policy-all-users-device-unknown-unsupported)
+- [Require device compliance](https://learn.microsoft.com/en-us/entra/identity/conditional-access/policy-all-users-device-compliance)
+- [Configure identity risk policies](https://learn.microsoft.com/en-us/entra/id-protection/howto-identity-protection-configure-risk-policies)
+- [Conditional Access for workload identities](https://learn.microsoft.com/en-us/entra/identity/conditional-access/workload-identity)
+- [Token Protection deployment guide for Windows](https://learn.microsoft.com/en-us/entra/identity/conditional-access/deployment-guide-token-protection-windows)
+- [Microsoft Entra built-in role IDs](https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/permissions-reference)
+- [Conditional Access grant controls](https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-conditional-access-grant)

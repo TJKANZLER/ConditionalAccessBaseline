@@ -1,0 +1,12 @@
+{
+  "id": "10000000-0000-4000-8000-000000000017",
+  "organizationId": "%OrganizationId%",
+  "description": "Users whose organization-managed iOS and Android devices must satisfy Intune device compliance in addition to App Protection.",
+  "displayName": "MSP-CA-Include-ManagedMobileDeviceCompliance",
+  "groupTypes": [],
+  "mail": null,
+  "mailEnabled": false,
+  "mailNickname": "mspca-includemanagedmobile",
+  "securityEnabled": true,
+  "visibility": null
+}

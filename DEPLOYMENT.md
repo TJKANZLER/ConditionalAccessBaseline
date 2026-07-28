@@ -1,54 +1,97 @@
-# Deployment runbook
+# CIPP deployment runbook
 
-The repository contains 37 Conditional Access templates and 16 group templates. `Config/MigrationTable.json` is support metadata, not a selectable template.
+The repository contains 30 Report-only Conditional Access templates, 15 group templates, stable migration mappings, and nine capability packages.
 
-## 1. Prepare
+## 1. Preflight
 
-1. Confirm licensing for each chosen module.
-2. Create and test two cloud-only emergency-access accounts with different strong authentication methods.
-3. Import the groups and populate `MSP-CA-Exclude-All-EmergencyAccess` before deploying policies.
-4. Alert on emergency-group changes and test both accounts from a clean browser.
-5. Confirm Security Defaults can be disabled when Conditional Access enforcement begins.
+- Confirm Microsoft 365 Business Premium or equivalent licensing for every in-scope user.
+- Create two cloud-only emergency-access accounts and monitor the emergency-access group.
+- Confirm at least one independent Global Administrator session works.
+- Verify CIPP/GDAP access and export the tenant's current Conditional Access policies.
+- Record whether Security Defaults is enabled. Do not disable it until the CA replacement is ready to deploy.
+- Validate Temporary Access Pass onboarding and administrator phishing-resistant methods.
+- If Microsoft Entra Connect is present, confirm its account holds the built-in Directory Synchronization Accounts role.
 
 ## 2. Import
 
-1. Publish this directory as a GitHub repository.
-2. Add `owner/repository` under **Tools → Community Repositories**.
-3. Import the 16 group JSON files.
-4. Import the 37 Conditional Access JSON files.
-5. Do not import `MigrationTable.json`; CIPP uses it automatically for dependency conversion.
+1. Add `TJKANZLER/ConditionalAccessBaseline` in **Tools → Community Repositories**.
+2. Import the 15 files under `Config/Groups`.
+3. Import the 30 files under `Config/ConditionalAccess`.
+4. Confirm CIPP resolves every template group ID through `Config/MigrationTable.json`.
+5. Confirm every imported policy state is Report-only.
 
-If bulk row selection is unavailable in the installed CIPP frontend, import the same folders row by row.
+Do not import `MigrationTable.json` or `PolicyPackages.psd1` as templates.
 
-## 3. Deploy in controlled phases
+When CIPP asks how to handle groups and users, choose **Replace by display name** after confirming the 15 target group names are unique. Do not choose **Remove all exclusions**; that would remove emergency-access and policy-specific safeguards. **Leave as is** is suitable only when the referenced object IDs already belong to that same tenant, which is not the portable community-repository path.
 
-Retain every template's initial state. Use display-name replacement, create missing groups, and preserve CIPP's GDAP/service-provider exception.
+## 3. Build the nine CIPP packages
 
-| Phase | Policies | Gate before moving to On |
-|---|---|---|
-| 0 | Groups only | Emergency accounts work and membership alerts fire |
-| 1 | CA001 | Legacy-auth dependencies are removed or formally migrated |
-| 2 | CA002–CA006 | MFA, TAP, enrollment, CLI, and mobile onboarding tests pass |
-| 3 | CA100–CA101 | Every administrator has phishing-resistant authentication and a separate admin identity |
-| 4 | CA200–CA202 | Representative B2B collaboration and approved guest-admin workflows pass |
-| 5 | CA300–CA303 | MAM, compliance, enrollment, desktop apps, and unmanaged browser tests pass |
-| 6 | CA307 | Interactive and noninteractive logs show compatible token-protection clients |
-| 7 | CA400–CA401 | Risk detections, self-remediation, licensing, and help-desk procedures pass |
-| 8 | CA500 | Workload ID license is present and service-principal report-only results are understood |
+Use [Config/PolicyPackages.psd1](Config/PolicyPackages.psd1) as the source of truth.
 
-Do not enable Disabled templates as a batch. Promote each optional template only after satisfying its dependency in the policy matrix.
+Where **Add to package** is available, multi-select each manifest set and apply its exact package name. Package tags are stored in CIPP, not in the Graph policy JSON.
 
-## Optional decisions
+Where that table action is unavailable, create the Conditional Access standard with the individual templates from one manifest package selected together. This still deploys the set to a tenant in one standard run; it does not require 30 separate deployments.
 
-- Choose CA300 App Protection or CA304/CA305 mobile compliance as the normal mobile model.
-- Choose CA302 (Intune compliance) or CA310 (compliant OR hybrid-joined) as the normal Windows desktop model; do not run both.
-- Enable CA007 only after deciding how ChromeOS and other platforms are handled.
-- Enable CA008 or CA501 only after every legitimate public egress address is represented by a trusted named location.
-- Integrate CA104's authentication context with PIM or a sensitive application before expecting evaluations.
-- Keep CA308 and CA700–CA704 Disabled while their required features remain Preview unless the customer formally accepts preview use.
+## 4. Assign in Report-only
 
-## Enforcement and rollback
+For each package:
 
-Change one phase at a time. Review Conditional Access failures, Identity Protection events, service-principal logs, help-desk volume, and CIPP drift before continuing.
+1. Add **Conditional Access Template** to the tenant or tenant-group Standards template.
+2. Select the package, or its complete manifest policy set.
+3. Set policy state to Report-only.
+4. Enable **Create Groups**.
+5. Disable Security Defaults only when package 01 is being deployed successfully in the same controlled change.
+6. Run the standard and confirm all expected policies exist in Entra.
+7. Re-run the standard to prove the deployment is idempotent.
 
-For rollback, return the affected policy to Report-only first. Do not delete it during an incident; retaining it preserves configuration and evaluation visibility. Use narrow, time-boxed exclusions only for documented business-critical dependencies, and monitor the group until it is empty.
+If CIPP reports `Empty Payload. JSON content expected`, stop. Confirm the selected standard resolves actual Conditional Access template RowKeys rather than only a package label, and verify CIPP frontend/API versions match. Re-enable Security Defaults if no replacement CA policies were created.
+
+## 5. Promotion sequence
+
+| Order | Package | Evidence required before enforcement |
+|---:|---|---|
+| 1 | Identity Foundation P1 | Legacy authentication, MFA, TAP, registration, and device-code flows pass |
+| 2 | Privileged Access P1/Intune | Admin authentication, sessions, and compliant workstations pass |
+| 3 | External Collaboration P1 | B2B collaboration and approved guest-admin paths pass |
+| 4 | Endpoint and App Protection | Every enabled Intune platform, MAM flow, browser restriction, and token client passes |
+| 5 | Trusted Location Guardrails | Admin, registration, and MFA-exempt account egress is complete |
+| 6 | Closed Network Perimeter | Only for a formally adopted office-only or always-on secure-access model |
+| 7 | Identity Protection P2 | Licensing, SSPR, risk detections, and help-desk remediation pass |
+| 8 | Workload Identity Premium | Licensing and all service-principal execution locations are verified |
+| 9 | Defender and Purview Advanced | Defender integration and Purview/HR/legal response are operational |
+
+Promote one package at a time. Do not assign packages 6–9 without their named operating model, licence, and service prerequisites.
+
+## 6. Location package controls
+
+CA008 blocks every all-human sign-in outside `AllTrusted`. Before enforcement:
+
+- verify each named location is marked trusted;
+- test every office, VPN/ZTNA exit, and recovery path;
+- test from a deliberately untrusted network;
+- confirm the emergency-access accounts remain excluded;
+- identify mobile and travelling-user handling;
+- schedule CA008 as a standalone change with a rollback administrator already signed in.
+
+## 7. Exception governance
+
+All exception groups start empty. For every member record:
+
+- owner and approver;
+- business reason;
+- policy being bypassed;
+- start and expiry date;
+- migration/remediation action;
+- last review date.
+
+Emergency access is not a general exception mechanism.
+
+## 8. Rollback
+
+1. Use the prevalidated emergency-access account.
+2. Return only the newly enforced policy or package to Report-only.
+3. Revoke affected user sessions only if necessary.
+4. Confirm sign-in recovery.
+5. Correct the prerequisite or scope before retrying.
+
+Do not delete failed policies during an incident; retaining them in Report-only preserves evidence and makes the fix auditable.

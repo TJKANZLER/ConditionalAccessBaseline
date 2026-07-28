@@ -1,28 +1,18 @@
 {
   "@odata.type": "#microsoft.graph.conditionalAccessPolicy",
-  "displayName": "MSP-CA308-Apple-Require-TokenProtection-Preview",
-  "state": "disabled",
+  "displayName": "MSP-CA309-M365-Browser-Monitor-With-DefenderAppControl",
+  "state": "enabledForReportingButNotEnforced",
   "conditions": {
-    "userRiskLevels": [],
-    "signInRiskLevels": [],
-    "servicePrincipalRiskLevels": [],
     "clientAppTypes": [
-      "mobileAppsAndDesktopClients"
+      "browser"
     ],
-    "platforms": {
-      "includePlatforms": [
-        "iOS",
-        "macOS"
-      ],
-      "excludePlatforms": []
-    },
+    "platforms": null,
     "locations": null,
     "devices": null,
     "authenticationFlows": null,
     "applications": {
       "includeApplications": [
-        "00000002-0000-0ff1-ce00-000000000000",
-        "00000003-0000-0ff1-ce00-000000000000"
+        "Office365"
       ],
       "excludeApplications": [],
       "includeUserActions": [],
@@ -37,10 +27,12 @@
       "includeGroups": [],
       "excludeGroups": [
         "10000000-0000-4000-8000-000000000001",
-        "10000000-0000-4000-8000-000000000011"
+        "10000000-0000-4000-8000-000000000013"
       ],
       "includeRoles": [],
-      "excludeRoles": [],
+      "excludeRoles": [
+        "d29b2b05-8046-44ba-8758-1e26182fcf32"
+      ],
       "includeGuestsOrExternalUsers": null,
       "excludeGuestsOrExternalUsers": {
         "@odata.type": "#microsoft.graph.conditionalAccessGuestsOrExternalUsers",
@@ -50,15 +42,12 @@
           "membershipKind": "all"
         }
       }
-    },
-    "clientApplications": null,
-    "agents": null,
-    "agentContext": null
+    }
   },
   "grantControls": null,
   "sessionControls": {
-    "secureSignInSession": {
-      "@odata.type": "#microsoft.graph.secureSignInSessionControl",
+    "cloudAppSecurity": {
+      "cloudAppSecurityType": "monitorOnly",
       "isEnabled": true
     }
   }

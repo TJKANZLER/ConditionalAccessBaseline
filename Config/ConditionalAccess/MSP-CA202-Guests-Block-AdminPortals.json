@@ -3,9 +3,6 @@
   "displayName": "MSP-CA202-Guests-Block-AdminPortals",
   "state": "enabledForReportingButNotEnforced",
   "conditions": {
-    "userRiskLevels": [],
-    "signInRiskLevels": [],
-    "servicePrincipalRiskLevels": [],
     "clientAppTypes": [
       "all"
     ],
@@ -41,10 +38,7 @@
         }
       },
       "excludeGuestsOrExternalUsers": null
-    },
-    "clientApplications": null,
-    "agents": null,
-    "agentContext": null
+    }
   },
   "grantControls": {
     "operator": "OR",

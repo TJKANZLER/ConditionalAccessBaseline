@@ -3,9 +3,6 @@
   "displayName": "MSP-CA001-Global-Block-LegacyAuthentication",
   "state": "enabledForReportingButNotEnforced",
   "conditions": {
-    "userRiskLevels": [],
-    "signInRiskLevels": [],
-    "servicePrincipalRiskLevels": [],
     "clientAppTypes": [
       "exchangeActiveSync",
       "other"
@@ -33,7 +30,9 @@
         "10000000-0000-4000-8000-000000000001"
       ],
       "includeRoles": [],
-      "excludeRoles": [],
+      "excludeRoles": [
+        "d29b2b05-8046-44ba-8758-1e26182fcf32"
+      ],
       "includeGuestsOrExternalUsers": null,
       "excludeGuestsOrExternalUsers": {
         "@odata.type": "#microsoft.graph.conditionalAccessGuestsOrExternalUsers",
@@ -43,10 +42,7 @@
           "membershipKind": "all"
         }
       }
-    },
-    "clientApplications": null,
-    "agents": null,
-    "agentContext": null
+    }
   },
   "grantControls": {
     "operator": "OR",

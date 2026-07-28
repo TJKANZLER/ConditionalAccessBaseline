@@ -1,11 +1,8 @@
 {
   "@odata.type": "#microsoft.graph.conditionalAccessPolicy",
   "displayName": "MSP-CA501-Workloads-Block-Outside-TrustedLocations",
-  "state": "disabled",
+  "state": "enabledForReportingButNotEnforced",
   "conditions": {
-    "userRiskLevels": [],
-    "signInRiskLevels": [],
-    "servicePrincipalRiskLevels": [],
     "clientAppTypes": [
       "all"
     ],
@@ -35,9 +32,7 @@
         "ServicePrincipalsInMyTenant"
       ],
       "excludeServicePrincipals": []
-    },
-    "agents": null,
-    "agentContext": null
+    }
   },
   "grantControls": {
     "operator": "OR",

@@ -1,15 +1,17 @@
 {
   "@odata.type": "#microsoft.graph.conditionalAccessPolicy",
-  "displayName": "MSP-CA702-AgentUsers-Require-CompliantDevice-Preview",
-  "state": "disabled",
+  "displayName": "MSP-CA305-Managed-Android-Require-CompliantDevice",
+  "state": "enabledForReportingButNotEnforced",
   "conditions": {
-    "userRiskLevels": [],
-    "signInRiskLevels": [],
-    "servicePrincipalRiskLevels": [],
     "clientAppTypes": [
-      "all"
+      "mobileAppsAndDesktopClients"
     ],
-    "platforms": null,
+    "platforms": {
+      "includePlatforms": [
+        "android"
+      ],
+      "excludePlatforms": []
+    },
     "locations": null,
     "devices": null,
     "authenticationFlows": null,
@@ -17,36 +19,28 @@
       "includeApplications": [
         "All"
       ],
-      "excludeApplications": [],
+      "excludeApplications": [
+        "0000000a-0000-0000-c000-000000000000",
+        "d4ebce55-015a-49b5-a083-c84d1797ae8c"
+      ],
       "includeUserActions": [],
       "includeAuthenticationContextClassReferences": [],
       "applicationFilter": null
     },
     "users": {
-      "includeUsers": [
-        "None"
-      ],
+      "includeUsers": [],
       "excludeUsers": [],
-      "includeGroups": [],
-      "excludeGroups": [],
+      "includeGroups": [
+        "10000000-0000-4000-8000-000000000017"
+      ],
+      "excludeGroups": [
+        "10000000-0000-4000-8000-000000000001",
+        "10000000-0000-4000-8000-000000000006"
+      ],
       "includeRoles": [],
       "excludeRoles": [],
       "includeGuestsOrExternalUsers": null,
       "excludeGuestsOrExternalUsers": null
-    },
-    "clientApplications": null,
-    "agents": {
-      "includeAgentUsers": [
-        "All"
-      ],
-      "excludeAgentUsers": [],
-      "agentFilter": null
-    },
-    "agentContext": {
-      "includeAgentContexts": [
-        "agentUserSessionsInitiatedFromEndpoints"
-      ],
-      "excludeAgentContexts": []
     }
   },
   "grantControls": {

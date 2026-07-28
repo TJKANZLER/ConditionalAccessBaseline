@@ -3,9 +3,6 @@
   "displayName": "MSP-CA200-Guests-Require-MFA",
   "state": "enabledForReportingButNotEnforced",
   "conditions": {
-    "userRiskLevels": [],
-    "signInRiskLevels": [],
-    "servicePrincipalRiskLevels": [],
     "clientAppTypes": [
       "all"
     ],
@@ -40,22 +37,16 @@
         }
       },
       "excludeGuestsOrExternalUsers": null
-    },
-    "clientApplications": null,
-    "agents": null,
-    "agentContext": null
+    }
   },
   "grantControls": {
-    "operator": "AND",
-    "builtInControls": [],
+    "operator": "OR",
+    "builtInControls": [
+      "mfa"
+    ],
     "customAuthenticationFactors": [],
     "termsOfUse": [],
-    "authenticationStrength": {
-      "id": "00000000-0000-0000-0000-000000000002",
-      "displayName": "Multifactor authentication",
-      "policyType": "builtIn",
-      "requirementsSatisfied": "mfa"
-    }
+    "authenticationStrength": null
   },
   "sessionControls": null
 }

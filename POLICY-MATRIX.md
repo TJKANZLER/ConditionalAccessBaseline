@@ -1,64 +1,54 @@
-# Policy matrix
+# Conditional Access policy matrix
 
-## Foundation, administrators, and guests
+All 30 policies start Report-only. Package prerequisites determine applicability; there are no lab templates or disabled placeholders.
 
-| Policy | Purpose | Initial state | Dependency or decision |
-|---|---|---|---|
-| MSP-CA001 | Block legacy authentication | Report-only | Legacy-usage inventory |
-| MSP-CA002 | Require MFA for internal users | Report-only | MFA registration |
-| MSP-CA003 | Protect security-info registration | Report-only | Temporary Access Pass process |
-| MSP-CA004 | Protect device registration and join | Report-only | Enrollment testing |
-| MSP-CA005 | Block device-code flow | Report-only | CLI/device inventory |
-| MSP-CA006 | Block authentication transfer | Report-only | Mobile onboarding testing |
-| MSP-CA007 | Block unknown device platforms | Disabled | User-agent condition is mutable; approve supported-platform policy first; exception group is `MSP-CA-Exclude-UnknownPlatforms`, not the compliance-exception group |
-| MSP-CA008 | Block outside trusted locations | Disabled | Define and verify every trusted egress path |
-| MSP-CA100 | Require phishing-resistant MFA for privileged roles | Report-only | Passkeys, WHfB, FIDO2, or CBA |
-| MSP-CA101 | Harden administrator sessions | Report-only | Separate administrator identities |
-| MSP-CA102 | Require compliant administrator devices | Disabled | Intune-managed privileged workstations |
-| MSP-CA103 | Use strict-location CAE for administrators | Disabled | Resilient network design and outage testing |
-| MSP-CA104 | Reauthenticate sensitive actions | Disabled | Connect `MSP Sensitive Action` authentication context to PIM/apps |
-| MSP-CA200 | Require MFA for guests | Report-only | Cross-tenant trust review |
-| MSP-CA201 | Harden guest sessions | Report-only | Guest user-experience review |
-| MSP-CA202 | Block ordinary guests from admin portals | Report-only | Approved B2B-admin exception group |
+| Package | Policies | Production coverage |
+|---:|---|---|
+| 01 Identity Foundation P1 | CA001–CA005 | Legacy authentication, all-user MFA, security-info registration, device registration, device-code flow |
+| 02 Privileged Access | CA100–CA102 | Phishing-resistant admin MFA, session hardening, compliant admin devices |
+| 03 External Collaboration | CA200–CA202 | Guest MFA, guest session hardening, guest admin-portal block |
+| 04 Endpoint and App Protection | CA007, CA300–CA307 | Unsupported platforms, mobile MAM, unmanaged browsers, Windows/macOS/iOS/Android/Linux compliance, Windows token protection |
+| 05 Trusted Location Guardrails | CA009, CA103, CA600 | Registration, administrator, and MFA-exempt service-account locations |
+| 06 Closed Network Perimeter | CA008 | All-human trusted-location boundary |
+| 07 Identity Protection P2 | CA400–CA401 | Sign-in risk MFA and high user-risk remediation |
+| 08 Workload Identity Premium | CA500–CA501 | Service-principal risk and location controls |
+| 09 Defender and Purview | CA309, CA402 | Defender App Control monitoring and insider-risk enforcement |
 
-## Intune, sessions, and token protection
+## Exact policies
 
-| Policy | Purpose | Initial state | Dependency or decision |
-|---|---|---|---|
-| MSP-CA300 | Require App Protection for Microsoft 365 mobile apps | Report-only | Intune MAM policies |
-| MSP-CA301 | Restrict Exchange/SharePoint downloads on unmanaged browsers | Report-only | SharePoint and Exchange configuration; exception group is `MSP-CA-Exclude-UnmanagedBrowser`, not the compliance-exception group |
-| MSP-CA302 | Require compliant Windows desktop clients | Report-only | Windows compliance |
-| MSP-CA303 | Require compliant macOS desktop clients | Report-only | macOS compliance and Apple SSO configuration |
-| MSP-CA304 | Require compliant iOS devices | Disabled | Alternative to CA300, not an automatic companion |
-| MSP-CA305 | Require compliant Android devices | Disabled | Alternative to CA300, not an automatic companion |
-| MSP-CA306 | Require compliant Linux devices | Disabled | Supported Intune Linux and application inventory |
-| MSP-CA307 | Require token protection on Windows native clients | Report-only | Supported Exchange/SharePoint clients and registered devices |
-| MSP-CA310 | Require compliant OR hybrid-joined Windows desktop clients | Disabled | Alternative to CA302 for hybrid Azure AD join environments not fully on Intune compliance; not an automatic companion |
-| MSP-CA308 | Require token protection on Apple native clients | Disabled | Preview; MDM and Enterprise SSO/Platform SSO |
-| MSP-CA309 | Monitor Microsoft 365 browser sessions with Defender App Control | Disabled | Defender for Cloud Apps integration |
+| ID | Policy | Primary prerequisite |
+|---|---|---|
+| CA001 | Block legacy authentication | Legacy-client remediation |
+| CA002 | Require MFA for internal users | MFA registration |
+| CA003 | Require MFA for security-info registration | Temporary Access Pass |
+| CA004 | Require MFA for device registration | Enrollment testing |
+| CA005 | Block device-code flow | CLI and Teams-device inventory |
+| CA007 | Block unknown or unsupported platforms | Supported-platform decision |
+| CA008 | Block all-human access outside trusted locations | Closed-network operating model |
+| CA009 | Block security-info registration outside trusted locations | Trusted registration paths |
+| CA100 | Require phishing-resistant MFA for admins | Resistant methods for 14 recommended roles |
+| CA101 | Harden admin sessions | Separate admin identities |
+| CA102 | Require compliant admin devices | Managed privileged workstations |
+| CA103 | Block admin access outside trusted locations | Admin VPN/ZTNA egress |
+| CA200 | Require guest MFA | Cross-tenant authentication testing |
+| CA201 | Harden guest sessions | Guest communications |
+| CA202 | Block ordinary guests from admin portals | Guest-admin allow group |
+| CA300 | Require mobile App Protection | iOS/Android Intune MAM |
+| CA301 | Restrict unmanaged-browser downloads | Exchange/SharePoint restrictions |
+| CA302 | Require compliant Windows native clients | Windows compliance |
+| CA303 | Require compliant macOS native clients | macOS compliance |
+| CA304 | Require compliance for managed iOS users | Managed-mobile include group |
+| CA305 | Require compliance for managed Android users | Managed-mobile include group |
+| CA306 | Require compliant Linux devices | Supported Intune Linux fleet |
+| CA307 | Require Windows token protection | Supported registered native clients |
+| CA309 | Monitor M365 browsers through Defender App Control | Defender for Cloud Apps |
+| CA400 | Require MFA every time for medium/high sign-in risk | Entra ID P2 |
+| CA401 | Require remediation for high user risk | Entra ID P2, SSPR/password writeback |
+| CA402 | Block elevated insider risk | Purview Adaptive Protection |
+| CA500 | Block high-risk workload identities | Workload ID Premium |
+| CA501 | Block workloads outside trusted locations | Workload ID Premium and known egress |
+| CA600 | Block MFA-exempt user accounts outside trusted locations | Complete service-account inventory |
 
-## Risk, workloads, and agents
+## Deliberate exclusions
 
-| Policy | Purpose | Initial state | License or dependency |
-|---|---|---|---|
-| MSP-CA400 | Medium/high sign-in risk requires MFA every time | Report-only | Entra ID P2 or Entra Suite; excludes the same temporary service-account group as CA002 |
-| MSP-CA401 | High user risk requires risk remediation | Report-only | Entra ID P2 or Entra Suite; `riskRemediation` alone (no stacked authentication strength); excludes the same temporary service-account group as CA002 |
-| MSP-CA402 | Block elevated insider risk | Disabled | Entra ID P2 plus Purview Adaptive Protection |
-| MSP-CA500 | Block high-risk workload identities | Report-only | Workload Identities Premium; inspect service-principal logs |
-| MSP-CA501 | Block workload identities outside trusted locations | Disabled | Workload Identities Premium and verified trusted locations |
-| MSP-CA700 | Block high-risk agent identities | Disabled | Preview and applicable agent-risk licensing |
-| MSP-CA701 | Block all agent identities from agent resources | Disabled | Preview deny-by-default option; define permitted agents first |
-| MSP-CA702 | Require compliant devices for endpoint-hosted agent users | Disabled | Preview, Intune, and endpoint execution context |
-| MSP-CA703 | Block risky agent-user sessions | Disabled | Preview and agent-risk signals |
-| MSP-CA704 | Restrict agent users to trusted locations | Disabled | Preview and verified trusted network locations |
-
-## Overlap rules
-
-- CA100 intentionally layers over CA002; phishing-resistant MFA satisfies the ordinary MFA requirement.
-- CA304 and CA305 are alternatives to the mobile App Protection approach in CA300. Do not enable both models without intentionally requiring both controls.
-- CA310 is an alternative to CA302 for hybrid Azure AD join environments. Do not enable both without intent; CA302 is the default primary and CA310 stays Disabled unless the customer relies on hybrid join instead of, or alongside, Intune compliance.
-- CA102 adds a privileged-workstation requirement over CA302/CA303/CA310 and should be enabled only when all administrator platforms are managed.
-- CA008 is a global location boundary. If enabled, narrower location policies can become redundant and should be reviewed.
-- Agent and workload policies target distinct non-human identity surfaces and do not replace user policies.
-- `MSP-CA-Exclude-DeviceCompliance` is shared only by the compliant-device policies (CA102, CA302-306, CA310); CA007 (unknown platforms) and CA301 (unmanaged-browser downloads) use their own dedicated exception groups (`MSP-CA-Exclude-UnknownPlatforms`, `MSP-CA-Exclude-UnmanagedBrowser`) so one exception can't silently bypass an unrelated control.
-- `MSP-CA-Exclude-MFA-Temporary` is excluded from CA002, CA400, and CA401 together, so a legacy service account exempted from baseline MFA isn't still challenged for MFA by the risk-based policies it can't complete.
+Authentication transfer blocking, strict-location CAE, Apple token protection, and Agent ID controls remain excluded while preview. The hybrid-join and mobile alternatives were replaced by one declared production model. Sensitive-action authentication context was removed because it is inert until tenant-specific PIM/application wiring exists.

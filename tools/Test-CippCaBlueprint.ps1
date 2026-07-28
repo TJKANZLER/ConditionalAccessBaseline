@@ -7,9 +7,9 @@ $ErrorActionPreference = 'Stop'
 $policyRoot = Join-Path $RepositoryRoot 'Config\ConditionalAccess'
 $groupRoot = Join-Path $RepositoryRoot 'Config\Groups'
 $migrationPath = Join-Path $RepositoryRoot 'Config\MigrationTable.json'
+$packagePath = Join-Path $RepositoryRoot 'Config\PolicyPackages.psd1'
 
 $errors = [System.Collections.Generic.List[string]]::new()
-$warnings = [System.Collections.Generic.List[string]]::new()
 $policies = @()
 
 foreach ($file in Get-ChildItem -LiteralPath $policyRoot -Filter '*.json') {
@@ -28,30 +28,25 @@ foreach ($file in Get-ChildItem -LiteralPath $policyRoot -Filter '*.json') {
     if ($policy.'@odata.type' -notlike '*conditionalAccessPolicy*') {
         $errors.Add("CIPP cannot identify this as a Conditional Access template: $($file.Name)")
     }
-    if ($policy.state -notin @('enabledForReportingButNotEnforced', 'disabled')) {
-        $errors.Add("Unsafe initial state in $($file.Name): $($policy.state)")
+    if ($policy.state -ne 'enabledForReportingButNotEnforced') {
+        $errors.Add("Every deployable template must start Report-only: $($file.Name) is $($policy.state)")
     }
     if ($policy.grantControls.builtInControls -contains 'approvedApplication') {
         $errors.Add("Retired approvedApplication control found in $($file.Name)")
     }
-    if (($policy.conditions.userRiskLevels.Count -gt 0) -and ($policy.conditions.signInRiskLevels.Count -gt 0)) {
-        $errors.Add("User and sign-in risk are combined in $($file.Name)")
+    foreach ($previewProperty in 'agents', 'agentContext', 'agentIdRiskLevels') {
+        if ($policy.conditions.PSObject.Properties.Name -contains $previewProperty) {
+            $errors.Add("Preview condition $previewProperty found in production template $($file.Name)")
+        }
     }
 }
 
-$duplicateNames = $policies | Group-Object displayName | Where-Object Count -gt 1
-foreach ($duplicate in $duplicateNames) {
+foreach ($duplicate in $policies | Group-Object displayName | Where-Object Count -gt 1) {
     $errors.Add("Duplicate policy display name: $($duplicate.Name)")
 }
 
-if ($policies.Count -ne 37) {
-    $errors.Add("Expected 37 Conditional Access policies but found $($policies.Count)")
-}
-
-$reportOnlyCount = @($policies | Where-Object state -eq 'enabledForReportingButNotEnforced').Count
-$disabledCount = @($policies | Where-Object state -eq 'disabled').Count
-if ($reportOnlyCount -ne 19 -or $disabledCount -ne 18) {
-    $errors.Add("Expected 19 Report-only and 18 Disabled policies; found $reportOnlyCount and $disabledCount")
+if ($policies.Count -ne 30) {
+    $errors.Add("Expected 30 Conditional Access policies but found $($policies.Count)")
 }
 
 $migration = Get-Content -LiteralPath $migrationPath -Raw | ConvertFrom-Json -Depth 20
@@ -93,33 +88,28 @@ foreach ($groupId in $groupIds) {
         $errors.Add("Group ID is missing from MigrationTable.json: $groupId")
     }
 }
-
-if ($groupIds.Count -ne 16) {
-    $errors.Add("Expected 16 supporting groups but found $($groupIds.Count)")
+foreach ($migrationId in $migrationIds) {
+    if ($migrationId -notin $groupIds) {
+        $errors.Add("MigrationTable.json contains a retired group ID: $migrationId")
+    }
 }
 
-$knownGroupIds = @($groupIds)
+if ($groupIds.Count -ne 15) {
+    $errors.Add("Expected 15 supporting groups but found $($groupIds.Count)")
+}
+
 foreach ($policy in $policies) {
     foreach ($groupId in @($policy.conditions.users.includeGroups) + @($policy.conditions.users.excludeGroups)) {
-        if ($groupId -and $groupId -notin $knownGroupIds) {
+        if ($groupId -and $groupId -notin $groupIds) {
             $errors.Add("Unmapped group ID $groupId in $($policy.displayName)")
         }
     }
 }
 
-$deviceComplianceGroupId = ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-DeviceCompliance').id
-$deviceComplianceOwners = @(
-    'MSP-CA102-Admins-Require-CompliantDevice',
-    'MSP-CA302-Windows-Require-CompliantDevice',
-    'MSP-CA303-macOS-Require-CompliantDevice',
-    'MSP-CA304-iOS-Require-CompliantDevice-Alternative',
-    'MSP-CA305-Android-Require-CompliantDevice-Alternative',
-    'MSP-CA306-Linux-Require-CompliantDevice',
-    'MSP-CA310-Windows-Require-CompliantOrHybridJoined-Alternative'
-)
-foreach ($policy in $policies) {
-    if ($deviceComplianceGroupId -in @($policy.conditions.users.excludeGroups) -and $policy.displayName -notin $deviceComplianceOwners) {
-        $errors.Add("$($policy.displayName) reuses MSP-CA-Exclude-DeviceCompliance outside its intended compliant-device scope; give it a dedicated exception group.")
+$directorySyncRole = 'd29b2b05-8046-44ba-8758-1e26182fcf32'
+foreach ($policy in $policies | Where-Object { $_.conditions.users.includeUsers -contains 'All' }) {
+    if ($directorySyncRole -notin @($policy.conditions.users.excludeRoles)) {
+        $errors.Add("$($policy.displayName) targets all users without excluding Directory Synchronization Accounts.")
     }
 }
 
@@ -133,79 +123,130 @@ $guestTypes = [string]$guestMfa.conditions.users.includeGuestsOrExternalUsers.gu
 if ($guestTypes -match 'serviceProvider') {
     $errors.Add('Guest MFA includes serviceProvider identities and can interfere with CIPP/GDAP.')
 }
+if ($guestMfa.grantControls.builtInControls -notcontains 'mfa' -or $guestMfa.grantControls.authenticationStrength) {
+    $errors.Add('Guest MFA must use the MFA grant so email OTP, SAML/WS-Fed, and Google-federated guests remain supported.')
+}
 
-$mustRemainDisabledPatterns = @(
-    'MSP-CA007-*',
-    'MSP-CA008-*',
-    'MSP-CA102-*',
-    'MSP-CA103-*',
-    'MSP-CA104-*',
-    'MSP-CA304-*',
-    'MSP-CA305-*',
-    'MSP-CA306-*',
-    'MSP-CA308-*',
-    'MSP-CA310-*',
-    'MSP-CA309-*',
-    'MSP-CA402-*',
-    'MSP-CA501-*',
-    'MSP-CA7*'
+$expectedAdminRoles = @(
+    '62e90394-69f5-4237-9190-012177145e10'
+    '194ae4cb-b126-40b2-bd5b-6091b380977d'
+    'f28a1f50-f6e7-4571-818b-6a12f2af6b6c'
+    '29232cdf-9323-42fd-ade2-1d097af3e4de'
+    'b1be1c3e-b65d-4f19-8427-f6fa0d97feb9'
+    '729827e3-9c14-49f7-bb1b-9608f156bbb8'
+    'b0f54661-2d74-4c50-afa3-1ec803f12efe'
+    'fe930be7-5e62-47db-91af-98c3a49a38b1'
+    'c4e39bd9-1100-46d3-8c65-fb160da0071f'
+    '9b895d92-2cd3-44c7-9d02-a6ac2d5ea5c3'
+    '158c047a-c907-4556-b7ef-446551a6b5f7'
+    '966707d0-3269-4727-9be2-8c3a10f19b9d'
+    '7be44c8a-adaf-4e2a-84d6-ab2649e08a13'
+    'e8611ab8-c189-46e8-94e1-60213ab1f814'
 )
-foreach ($pattern in $mustRemainDisabledPatterns) {
-    foreach ($policy in $policies | Where-Object displayName -Like $pattern) {
-        if ($policy.state -ne 'disabled') {
-            $errors.Add("Dependency-heavy or preview policy must begin Disabled: $($policy.displayName)")
-        }
+foreach ($policyName in 'MSP-CA100-Admins-Require-PhishingResistantMFA', 'MSP-CA101-Admins-Session-Hardening', 'MSP-CA102-Admins-Require-CompliantDevice', 'MSP-CA103-Admins-Block-Outside-TrustedLocations') {
+    $adminPolicy = $policies | Where-Object displayName -eq $policyName
+    $actualRoles = @($adminPolicy.conditions.users.includeRoles)
+    if ($actualRoles.Count -ne $expectedAdminRoles.Count -or
+        @($expectedAdminRoles | Where-Object { $_ -notin $actualRoles }).Count -gt 0) {
+        $errors.Add("$policyName does not target the current Microsoft-recommended administrator role set.")
     }
 }
 
-$tokenPolicies = @($policies | Where-Object displayName -Like '*TokenProtection*')
-foreach ($policy in $tokenPolicies) {
-    if ($policy.conditions.applications.includeApplications -contains 'Office365') {
-        $errors.Add("Token protection must not target the Office365 app bundle: $($policy.displayName)")
+$deviceCodePolicy = $policies | Where-Object displayName -eq 'MSP-CA005-Global-Block-DeviceCodeFlow'
+$deviceRegistrationServiceAppId = '01cb2876-7ebd-4aa4-9cc9-d28bd4d359a9'
+if ($deviceRegistrationServiceAppId -notin @($deviceCodePolicy.conditions.applications.excludeApplications)) {
+    $errors.Add('Device-code blocking does not exclude Microsoft Entra Device Registration Service.')
+}
+
+$deviceComplianceGroupId = ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-DeviceCompliance').id
+$deviceComplianceOwners = @(
+    'MSP-CA102-Admins-Require-CompliantDevice'
+    'MSP-CA302-Windows-Require-CompliantDevice'
+    'MSP-CA303-macOS-Require-CompliantDevice'
+    'MSP-CA304-Managed-iOS-Require-CompliantDevice'
+    'MSP-CA305-Managed-Android-Require-CompliantDevice'
+    'MSP-CA306-Linux-Require-CompliantDevice'
+)
+foreach ($policy in $policies) {
+    if ($deviceComplianceGroupId -in @($policy.conditions.users.excludeGroups) -and $policy.displayName -notin $deviceComplianceOwners) {
+        $errors.Add("$($policy.displayName) reuses the device-compliance exception outside its intended scope.")
     }
-    if ($policy.conditions.clientAppTypes -contains 'browser') {
-        $errors.Add("Token protection must not target browser clients: $($policy.displayName)")
+}
+
+$tokenPolicy = $policies | Where-Object displayName -eq 'MSP-CA307-Windows-Require-TokenProtection'
+$supportedTokenResources = @(
+    '00000002-0000-0ff1-ce00-000000000000'
+    '00000003-0000-0ff1-ce00-000000000000'
+    'cc15fd57-2c6c-4117-a88c-83b1d56b4bbe'
+)
+foreach ($resource in $supportedTokenResources) {
+    if ($resource -notin @($tokenPolicy.conditions.applications.includeApplications)) {
+        $errors.Add("Windows token protection is missing supported resource $resource.")
     }
-    if (-not $policy.sessionControls.secureSignInSession.isEnabled) {
-        $errors.Add("Token protection session control is missing: $($policy.displayName)")
-    }
+}
+if ($tokenPolicy.conditions.applications.includeApplications -contains 'Office365' -or
+    $tokenPolicy.conditions.clientAppTypes -contains 'browser' -or
+    -not $tokenPolicy.sessionControls.secureSignInSession.isEnabled) {
+    $errors.Add('Windows token-protection scope is unsafe or incomplete.')
 }
 
 $riskRemediation = $policies | Where-Object displayName -eq 'MSP-CA401-Risk-User-High-Require-Remediation'
-if (($riskRemediation.grantControls.builtInControls -notcontains 'riskRemediation') -or
-    $riskRemediation.grantControls.authenticationStrength -or
-    $riskRemediation.conditions.userRiskLevels -notcontains 'high' -or
-    $riskRemediation.conditions.signInRiskLevels.Count -gt 0 -or
-    $riskRemediation.conditions.applications.includeApplications -notcontains 'All' -or
-    $riskRemediation.conditions.applications.excludeApplications.Count -gt 0) {
-    $errors.Add('High user-risk remediation policy does not meet Microsoft Graph control constraints.')
+if ($riskRemediation.conditions.userRiskLevels -notcontains 'high' -or
+    $riskRemediation.grantControls.builtInControls -notcontains 'riskRemediation' -or
+    $riskRemediation.conditions.PSObject.Properties.Name -contains 'signInRiskLevels') {
+    $errors.Add('High user-risk policy must use a separate high-risk remediation control.')
 }
 
-$mfaTemporaryGroupId = ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-MFA-Temporary').id
-foreach ($riskPolicyName in 'MSP-CA400-Risk-SignIn-MediumHigh-Require-MFA', 'MSP-CA401-Risk-User-High-Require-Remediation') {
-    $riskPolicy = $policies | Where-Object displayName -eq $riskPolicyName
-    if ($mfaTemporaryGroupId -notin @($riskPolicy.conditions.users.excludeGroups)) {
-        $errors.Add("$riskPolicyName does not exclude MSP-CA-Exclude-MFA-Temporary; MFA-exempt service accounts would still be challenged.")
+foreach ($workloadPolicy in $policies | Where-Object displayName -Like 'MSP-CA5*') {
+    if ($workloadPolicy.conditions.clientApplications.includeServicePrincipals -notcontains 'ServicePrincipalsInMyTenant') {
+        $errors.Add("Workload policy lacks the portable tenant-owned service-principal selector: $($workloadPolicy.displayName)")
     }
 }
 
-$workloadPolicies = @($policies | Where-Object displayName -Like 'MSP-CA5*')
-foreach ($policy in $workloadPolicies) {
-    if ($policy.conditions.clientApplications.includeServicePrincipals -notcontains 'ServicePrincipalsInMyTenant') {
-        $errors.Add("Workload policy is missing the portable all-service-principals selector: $($policy.displayName)")
+if (-not (Test-Path -LiteralPath $packagePath)) {
+    $errors.Add('Config\PolicyPackages.psd1 is missing.')
+}
+else {
+    $packageManifest = Import-PowerShellDataFile -LiteralPath $packagePath
+    $packages = @($packageManifest.Packages)
+    if ($packages.Count -ne 9) {
+        $errors.Add("Expected nine activation packages but found $($packages.Count).")
     }
-}
+    $expectedPackageNames = @(
+        'SHOOTHILL-CA-01-Identity-Foundation-P1'
+        'SHOOTHILL-CA-02-Privileged-Access-P1-Intune'
+        'SHOOTHILL-CA-03-External-Collaboration-P1'
+        'SHOOTHILL-CA-04-Endpoint-and-App-Protection-Intune'
+        'SHOOTHILL-CA-05-Trusted-Location-Guardrails-P1'
+        'SHOOTHILL-CA-06-Closed-Network-Perimeter-P1'
+        'SHOOTHILL-CA-07-Identity-Protection-P2'
+        'SHOOTHILL-CA-08-Workload-Identity-Premium'
+        'SHOOTHILL-CA-09-Defender-and-Purview-Advanced'
+    )
+    foreach ($expectedName in $expectedPackageNames) {
+        if ($expectedName -notin @($packages.Name)) {
+            $errors.Add("Required activation package is missing or renamed: $expectedName")
+        }
+    }
 
-$agentPolicies = @($policies | Where-Object displayName -Like 'MSP-CA7*')
-if ($agentPolicies.Count -ne 5) {
-    $errors.Add("Expected five Agent Preview policies but found $($agentPolicies.Count)")
-}
+    foreach ($package in $packages) {
+        if (-not $package.Name -or -not $package.Purpose -or -not $package.ReadinessGate -or @($package.Policies).Count -eq 0) {
+            $errors.Add('Each package needs a descriptive name, purpose, readiness gate, and at least one policy.')
+        }
+    }
 
-foreach ($policy in $policies) {
-    foreach ($property in 'insiderRiskLevels', 'agentIdRiskLevels') {
-        if ($policy.conditions.PSObject.Properties.Name -contains $property -and
-            [string]::IsNullOrWhiteSpace([string]$policy.conditions.$property)) {
-            $errors.Add("Empty optional Graph enum property $property in $($policy.displayName)")
+    $packagedPolicies = @($packages | ForEach-Object { @($_.Policies) })
+    foreach ($duplicate in $packagedPolicies | Group-Object | Where-Object Count -gt 1) {
+        $errors.Add("Policy is assigned to more than one package: $($duplicate.Name)")
+    }
+    foreach ($policy in $policies) {
+        if ($policy.displayName -notin $packagedPolicies) {
+            $errors.Add("Policy is not assigned to a package: $($policy.displayName)")
+        }
+    }
+    foreach ($policyName in $packagedPolicies) {
+        if ($policyName -notin @($policies.displayName)) {
+            $errors.Add("Package contains a missing or retired policy: $policyName")
         }
     }
 }
@@ -215,5 +256,4 @@ if ($errors.Count -gt 0) {
     exit 1
 }
 
-$warnings | ForEach-Object { Write-Warning $_ }
-Write-Output "PASS: $($policies.Count) policies ($reportOnlyCount Report-only, $disabledCount Disabled), $($groupIds.Count) groups, safe CIPP layout, valid dependencies, no duplicate names, and no retired approved-client-app controls."
+Write-Output "PASS: 30 production policies (all Report-only), 15 groups, nine complete capability packages, safe CIPP layout, and validated Microsoft dependencies."

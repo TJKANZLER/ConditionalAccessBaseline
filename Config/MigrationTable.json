@@ -17,11 +17,6 @@
       "Type": "Group"
     },
     {
-      "DisplayName": "MSP-CA-Exclude-AuthenticationTransfer",
-      "Id": "10000000-0000-4000-8000-000000000004",
-      "Type": "Group"
-    },
-    {
       "DisplayName": "MSP-CA-Exclude-Registration",
       "Id": "10000000-0000-4000-8000-000000000005",
       "Type": "Group"
@@ -57,11 +52,6 @@
       "Type": "Group"
     },
     {
-      "DisplayName": "MSP-CA-Exclude-StrictCAE",
-      "Id": "10000000-0000-4000-8000-000000000012",
-      "Type": "Group"
-    },
-    {
       "DisplayName": "MSP-CA-Exclude-DefenderAppControl",
       "Id": "10000000-0000-4000-8000-000000000013",
       "Type": "Group"
@@ -79,6 +69,11 @@
     {
       "DisplayName": "MSP-CA-Exclude-UnmanagedBrowser",
       "Id": "10000000-0000-4000-8000-000000000016",
+      "Type": "Group"
+    },
+    {
+      "DisplayName": "MSP-CA-Include-ManagedMobileDeviceCompliance",
+      "Id": "10000000-0000-4000-8000-000000000017",
       "Type": "Group"
     }
   ],

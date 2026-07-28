@@ -1,19 +1,22 @@
 {
   "@odata.type": "#microsoft.graph.conditionalAccessPolicy",
-  "displayName": "MSP-CA305-Android-Require-CompliantDevice-Alternative",
-  "state": "disabled",
+  "displayName": "MSP-CA007-Global-Block-UnknownOrUnsupportedPlatforms",
+  "state": "enabledForReportingButNotEnforced",
   "conditions": {
-    "userRiskLevels": [],
-    "signInRiskLevels": [],
-    "servicePrincipalRiskLevels": [],
     "clientAppTypes": [
-      "mobileAppsAndDesktopClients"
+      "all"
     ],
     "platforms": {
       "includePlatforms": [
-        "android"
+        "all"
       ],
-      "excludePlatforms": []
+      "excludePlatforms": [
+        "android",
+        "iOS",
+        "windows",
+        "macOS",
+        "linux"
+      ]
     },
     "locations": null,
     "devices": null,
@@ -22,10 +25,7 @@
       "includeApplications": [
         "All"
       ],
-      "excludeApplications": [
-        "0000000a-0000-0000-c000-000000000000",
-        "d4ebce55-015a-49b5-a083-c84d1797ae8c"
-      ],
+      "excludeApplications": [],
       "includeUserActions": [],
       "includeAuthenticationContextClassReferences": [],
       "applicationFilter": null
@@ -38,28 +38,27 @@
       "includeGroups": [],
       "excludeGroups": [
         "10000000-0000-4000-8000-000000000001",
-        "10000000-0000-4000-8000-000000000006"
+        "10000000-0000-4000-8000-000000000015"
       ],
       "includeRoles": [],
-      "excludeRoles": [],
+      "excludeRoles": [
+        "d29b2b05-8046-44ba-8758-1e26182fcf32"
+      ],
       "includeGuestsOrExternalUsers": null,
       "excludeGuestsOrExternalUsers": {
         "@odata.type": "#microsoft.graph.conditionalAccessGuestsOrExternalUsers",
-        "guestOrExternalUserTypes": "internalGuest,b2bCollaborationGuest,b2bCollaborationMember,b2bDirectConnectUser,otherExternalUser",
+        "guestOrExternalUserTypes": "serviceProvider",
         "externalTenants": {
           "@odata.type": "#microsoft.graph.conditionalAccessAllExternalTenants",
           "membershipKind": "all"
         }
       }
-    },
-    "clientApplications": null,
-    "agents": null,
-    "agentContext": null
+    }
   },
   "grantControls": {
     "operator": "OR",
     "builtInControls": [
-      "compliantDevice"
+      "block"
     ],
     "customAuthenticationFactors": [],
     "termsOfUse": [],

@@ -3,9 +3,6 @@
   "displayName": "MSP-CA100-Admins-Require-PhishingResistantMFA",
   "state": "enabledForReportingButNotEnforced",
   "conditions": {
-    "userRiskLevels": [],
-    "signInRiskLevels": [],
-    "servicePrincipalRiskLevels": [],
     "clientAppTypes": [
       "all"
     ],
@@ -43,17 +40,7 @@
         "158c047a-c907-4556-b7ef-446551a6b5f7",
         "966707d0-3269-4727-9be2-8c3a10f19b9d",
         "7be44c8a-adaf-4e2a-84d6-ab2649e08a13",
-        "e8611ab8-c189-46e8-94e1-60213ab1f814",
-        "f2ef992c-3afb-46b9-b7cf-a126ee74c451",
-        "3a2c62db-5318-420d-8d74-23affee5d9d5",
-        "db506228-d27e-4b7d-95e5-295956d6615f",
-        "6b942400-691f-4bf0-9d12-d8a254a2baf5",
-        "d2562ede-74db-457e-a7b6-544e236ebb61",
-        "e93e3737-fa85-474a-aee4-7d3fb86510f3",
-        "b6a27b2b-f905-4b2e-81b5-0d90e0ef1fdb",
-        "1707125e-0aa2-4d4d-8655-a7c786c76a25",
-        "69091246-20e8-4a56-aa4d-066075b2a7a8",
-        "11451d60-acb2-45eb-a7d6-43d0f0125c13"
+        "e8611ab8-c189-46e8-94e1-60213ab1f814"
       ],
       "excludeRoles": [],
       "includeGuestsOrExternalUsers": null,
@@ -65,10 +52,7 @@
           "membershipKind": "all"
         }
       }
-    },
-    "clientApplications": null,
-    "agents": null,
-    "agentContext": null
+    }
   },
   "grantControls": {
     "operator": "AND",

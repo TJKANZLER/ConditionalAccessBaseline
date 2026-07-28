@@ -12,11 +12,22 @@ foreach ($path in @($configRoot, $policyRoot, $groupRoot)) {
     New-Item -ItemType Directory -Path $path -Force | Out-Null
 }
 
+function Write-JsonFile {
+    param(
+        [Parameter(Mandatory)]$InputObject,
+        [Parameter(Mandatory)][string]$Path,
+        [int]$Depth = 30
+    )
+
+    $json = $InputObject | ConvertTo-Json -Depth $Depth
+    $json = ($json -replace "`r`n", "`n") + "`n"
+    [System.IO.File]::WriteAllText($Path, $json, [System.Text.UTF8Encoding]::new($false))
+}
+
 $ids = [ordered]@{
     ExcludeAll              = '10000000-0000-4000-8000-000000000001'
     ExcludeMfa              = '10000000-0000-4000-8000-000000000002'
     ExcludeDeviceCode       = '10000000-0000-4000-8000-000000000003'
-    ExcludeAuthTransfer     = '10000000-0000-4000-8000-000000000004'
     ExcludeRegistration     = '10000000-0000-4000-8000-000000000005'
     ExcludeCompliance       = '10000000-0000-4000-8000-000000000006'
     ExcludeAppProtection    = '10000000-0000-4000-8000-000000000007'
@@ -24,18 +35,17 @@ $ids = [ordered]@{
     ExcludeRisk             = '10000000-0000-4000-8000-000000000009'
     ExcludeLocation         = '10000000-0000-4000-8000-000000000010'
     ExcludeTokenProtection  = '10000000-0000-4000-8000-000000000011'
-    ExcludeCAE              = '10000000-0000-4000-8000-000000000012'
     ExcludeCloudAppSecurity = '10000000-0000-4000-8000-000000000013'
     ExcludeInsiderRisk      = '10000000-0000-4000-8000-000000000014'
     ExcludeUnknownPlatforms = '10000000-0000-4000-8000-000000000015'
     ExcludeUnmanagedBrowser = '10000000-0000-4000-8000-000000000016'
+    IncludeManagedMobile    = '10000000-0000-4000-8000-000000000017'
 }
 
 $groupNames = [ordered]@{
     ExcludeAll             = 'MSP-CA-Exclude-All-EmergencyAccess'
     ExcludeMfa             = 'MSP-CA-Exclude-MFA-Temporary'
     ExcludeDeviceCode      = 'MSP-CA-Exclude-DeviceCodeFlow'
-    ExcludeAuthTransfer    = 'MSP-CA-Exclude-AuthenticationTransfer'
     ExcludeRegistration    = 'MSP-CA-Exclude-Registration'
     ExcludeCompliance      = 'MSP-CA-Exclude-DeviceCompliance'
     ExcludeAppProtection   = 'MSP-CA-Exclude-AppProtection'
@@ -43,31 +53,34 @@ $groupNames = [ordered]@{
     ExcludeRisk            = 'MSP-CA-Exclude-RiskPolicies'
     ExcludeLocation        = 'MSP-CA-Exclude-LocationPolicies'
     ExcludeTokenProtection = 'MSP-CA-Exclude-TokenProtection'
-    ExcludeCAE             = 'MSP-CA-Exclude-StrictCAE'
     ExcludeCloudAppSecurity = 'MSP-CA-Exclude-DefenderAppControl'
     ExcludeInsiderRisk     = 'MSP-CA-Exclude-InsiderRisk'
     ExcludeUnknownPlatforms = 'MSP-CA-Exclude-UnknownPlatforms'
     ExcludeUnmanagedBrowser = 'MSP-CA-Exclude-UnmanagedBrowser'
+    IncludeManagedMobile   = 'MSP-CA-Include-ManagedMobileDeviceCompliance'
 }
 
 $groupDescriptions = [ordered]@{
     ExcludeAll             = 'Emergency access accounts only. Membership must be monitored and alerted.'
     ExcludeMfa             = 'Temporary exception for user-based service accounts pending migration. Keep empty by default.'
     ExcludeDeviceCode      = 'Approved identities that have a documented requirement for OAuth device code flow.'
-    ExcludeAuthTransfer    = 'Approved identities that require authentication transfer. Keep empty unless tested.'
     ExcludeRegistration    = 'Temporary exception for device or security-information registration workflows.'
-    ExcludeCompliance      = 'Temporary device compliance exception, shared by every compliant-device requirement (CA102, CA302-306, CA310). Keep empty by default.'
+    ExcludeCompliance      = 'Temporary device compliance exception, shared only by CA102, CA302, and CA303. Keep empty by default.'
     ExcludeAppProtection   = 'Temporary Intune App Protection exception. Keep empty by default.'
     AllowGuestAdminPortals = 'Explicitly approved B2B guest administrators allowed to reach Microsoft admin portals.'
-    ExcludeRisk            = 'Emergency risk-policy exceptions. Keep empty by default.'
+    ExcludeRisk            = 'Emergency exception from Entra ID Protection risk remediation. Keep empty by default.'
     ExcludeLocation        = 'Temporary exception from trusted-location restrictions. Keep empty by default.'
     ExcludeTokenProtection = 'Temporary exception for token-protection compatibility issues. Keep empty by default.'
-    ExcludeCAE             = 'Temporary exception from strict-location Continuous Access Evaluation. Keep empty by default.'
     ExcludeCloudAppSecurity = 'Temporary exception from Defender for Cloud Apps session controls. Keep empty by default.'
     ExcludeInsiderRisk     = 'Approved exception from Purview insider-risk enforcement. Keep empty by default.'
-    ExcludeUnknownPlatforms = 'Temporary exception from the unknown-platform block (CA007) only. Keep empty by default.'
+    ExcludeUnknownPlatforms = 'Temporary exception from the unsupported-platform block. Keep empty by default.'
     ExcludeUnmanagedBrowser = 'Temporary exception from the unmanaged-browser download restriction (CA301) only. Keep empty by default.'
+    IncludeManagedMobile   = 'Users whose organization-managed iOS and Android devices must satisfy Intune device compliance in addition to App Protection.'
 }
+
+# Microsoft Entra Connect's built-in role is excluded from user-scoped policies.
+# Role template IDs are stable across tenants.
+$directorySynchronizationAccountsRoleTemplateId = 'd29b2b05-8046-44ba-8758-1e26182fcf32'
 
 $mfaStrength = [ordered]@{
     id                    = '00000000-0000-0000-0000-000000000002'
@@ -83,8 +96,8 @@ $phishingResistantStrength = [ordered]@{
     requirementsSatisfied = 'mfa'
 }
 
-# Microsoft-recommended privileged roles plus additional high-impact roles used by the
-# maintained j0eyv framework. Role template IDs are stable across tenants.
+# Microsoft-recommended administrator roles for phishing-resistant MFA.
+# Role template IDs are stable across tenants.
 $adminRoleTemplateIds = @(
     '62e90394-69f5-4237-9190-012177145e10',
     '194ae4cb-b126-40b2-bd5b-6091b380977d',
@@ -99,17 +112,7 @@ $adminRoleTemplateIds = @(
     '158c047a-c907-4556-b7ef-446551a6b5f7',
     '966707d0-3269-4727-9be2-8c3a10f19b9d',
     '7be44c8a-adaf-4e2a-84d6-ab2649e08a13',
-    'e8611ab8-c189-46e8-94e1-60213ab1f814',
-    'f2ef992c-3afb-46b9-b7cf-a126ee74c451',
-    '3a2c62db-5318-420d-8d74-23affee5d9d5',
-    'db506228-d27e-4b7d-95e5-295956d6615f',
-    '6b942400-691f-4bf0-9d12-d8a254a2baf5',
-    'd2562ede-74db-457e-a7b6-544e236ebb61',
-    'e93e3737-fa85-474a-aee4-7d3fb86510f3',
-    'b6a27b2b-f905-4b2e-81b5-0d90e0ef1fdb',
-    '1707125e-0aa2-4d4d-8655-a7c786c76a25',
-    '69091246-20e8-4a56-aa4d-066075b2a7a8',
-    '11451d60-acb2-45eb-a7d6-43d0f0125c13'
+    'e8611ab8-c189-46e8-94e1-60213ab1f814'
 )
 
 function New-AllExternalUsersObject {
@@ -136,7 +139,7 @@ function New-ServiceProviderUsersObject {
 
 function New-UserScope {
     param(
-        [ValidateSet('AllHuman', 'Internal', 'Guests', 'Admins')]
+        [ValidateSet('AllHuman', 'Internal', 'Guests', 'Admins', 'ManagedMobile', 'MfaExceptionAccounts')]
         [string]$Scope,
         [string[]]$ExcludeGroups = @()
     )
@@ -155,10 +158,12 @@ function New-UserScope {
     switch ($Scope) {
         'AllHuman' {
             $users.includeUsers = @('All')
+            $users.excludeRoles = @($directorySynchronizationAccountsRoleTemplateId)
             $users.excludeGuestsOrExternalUsers = New-ServiceProviderUsersObject
         }
         'Internal' {
             $users.includeUsers = @('All')
+            $users.excludeRoles = @($directorySynchronizationAccountsRoleTemplateId)
             $users.excludeGuestsOrExternalUsers = New-AllExternalUsersObject
         }
         'Guests' {
@@ -167,6 +172,12 @@ function New-UserScope {
         'Admins' {
             $users.includeRoles = @($adminRoleTemplateIds)
             $users.excludeGuestsOrExternalUsers = New-ServiceProviderUsersObject
+        }
+        'ManagedMobile' {
+            $users.includeGroups = @($ids.IncludeManagedMobile)
+        }
+        'MfaExceptionAccounts' {
+            $users.includeGroups = @($ids.ExcludeMfa)
         }
     }
 
@@ -177,15 +188,14 @@ function New-ApplicationsScope {
     param(
         [string[]]$IncludeApplications = @('All'),
         [string[]]$ExcludeApplications = @(),
-        [string[]]$IncludeUserActions = @(),
-        [string[]]$IncludeAuthenticationContexts = @()
+        [string[]]$IncludeUserActions = @()
     )
 
     [ordered]@{
         includeApplications                         = @($IncludeApplications)
         excludeApplications                         = @($ExcludeApplications)
         includeUserActions                          = @($IncludeUserActions)
-        includeAuthenticationContextClassReferences = @($IncludeAuthenticationContexts)
+        includeAuthenticationContextClassReferences = @()
         applicationFilter                           = $null
     }
 }
@@ -203,16 +213,10 @@ function New-Conditions {
         [string[]]$UserRiskLevels = @(),
         [string[]]$ServicePrincipalRiskLevels = @(),
         $InsiderRiskLevels = $null,
-        $ClientApplications = $null,
-        $Agents = $null,
-        $AgentContext = $null,
-        $AgentIdRiskLevels = $null
+        $ClientApplications = $null
     )
 
     $conditions = [ordered]@{
-        userRiskLevels      = @($UserRiskLevels)
-        signInRiskLevels    = @($SignInRiskLevels)
-        servicePrincipalRiskLevels = @($ServicePrincipalRiskLevels)
         clientAppTypes      = @($ClientAppTypes)
         platforms           = $Platforms
         locations           = $Locations
@@ -220,15 +224,21 @@ function New-Conditions {
         authenticationFlows = $AuthenticationFlows
         applications        = $Applications
         users               = $Users
-        clientApplications  = $ClientApplications
-        agents              = $Agents
-        agentContext        = $AgentContext
     }
-    if (-not [string]::IsNullOrWhiteSpace([string]$InsiderRiskLevels)) {
+    if ($SignInRiskLevels.Count -gt 0) {
+        $conditions.signInRiskLevels = @($SignInRiskLevels)
+    }
+    if ($UserRiskLevels.Count -gt 0) {
+        $conditions.userRiskLevels = @($UserRiskLevels)
+    }
+    if ($ServicePrincipalRiskLevels.Count -gt 0) {
+        $conditions.servicePrincipalRiskLevels = @($ServicePrincipalRiskLevels)
+    }
+    if ($null -ne $InsiderRiskLevels) {
         $conditions.insiderRiskLevels = $InsiderRiskLevels
     }
-    if (-not [string]::IsNullOrWhiteSpace([string]$AgentIdRiskLevels)) {
-        $conditions.agentIdRiskLevels = $AgentIdRiskLevels
+    if ($null -ne $ClientApplications) {
+        $conditions.clientApplications = $ClientApplications
     }
     $conditions
 }
@@ -276,9 +286,11 @@ $intuneExclusions = @(
     '0000000a-0000-0000-c000-000000000000',
     'd4ebce55-015a-49b5-a083-c84d1797ae8c'
 )
+$deviceRegistrationServiceAppId = '01cb2876-7ebd-4aa4-9cc9-d28bd4d359a9'
 $tokenProtectionResources = @(
     '00000002-0000-0ff1-ce00-000000000000',
-    '00000003-0000-0ff1-ce00-000000000000'
+    '00000003-0000-0ff1-ce00-000000000000',
+    'cc15fd57-2c6c-4117-a88c-83b1d56b4bbe'
 )
 
 $policies += New-Policy -DisplayName 'MSP-CA001-Global-Block-LegacyAuthentication' `
@@ -302,28 +314,28 @@ $policies += New-Policy -DisplayName 'MSP-CA004-Global-Protect-DeviceRegistratio
 
 $policies += New-Policy -DisplayName 'MSP-CA005-Global-Block-DeviceCodeFlow' `
     -Conditions (New-Conditions -Users (New-UserScope AllHuman -ExcludeGroups @($allGroup, $ids.ExcludeDeviceCode)) `
+        -Applications (New-ApplicationsScope -ExcludeApplications @($deviceRegistrationServiceAppId)) `
         -AuthenticationFlows ([ordered]@{ transferMethods = 'deviceCodeFlow' })) `
     -GrantControls (New-Grant -BuiltInControls @('block'))
 
-$policies += New-Policy -DisplayName 'MSP-CA006-Global-Block-AuthenticationTransfer' `
-    -Conditions (New-Conditions -Users (New-UserScope AllHuman -ExcludeGroups @($allGroup, $ids.ExcludeAuthTransfer)) `
-        -AuthenticationFlows ([ordered]@{ transferMethods = 'authenticationTransfer' })) `
-    -GrantControls (New-Grant -BuiltInControls @('block'))
-
-$policies += New-Policy -DisplayName 'MSP-CA007-Global-Block-UnknownPlatforms' `
+$policies += New-Policy -DisplayName 'MSP-CA007-Global-Block-UnknownOrUnsupportedPlatforms' `
     -Conditions (New-Conditions -Users (New-UserScope AllHuman -ExcludeGroups @($allGroup, $ids.ExcludeUnknownPlatforms)) `
         -Platforms ([ordered]@{
             includePlatforms = @('all')
             excludePlatforms = @('android', 'iOS', 'windows', 'macOS', 'linux')
         })) `
-    -GrantControls (New-Grant -BuiltInControls @('block')) `
-    -State disabled
+    -GrantControls (New-Grant -BuiltInControls @('block'))
 
 $policies += New-Policy -DisplayName 'MSP-CA008-Global-Block-Outside-TrustedLocations' `
     -Conditions (New-Conditions -Users (New-UserScope AllHuman -ExcludeGroups @($allGroup, $ids.ExcludeLocation)) `
         -Locations ([ordered]@{ includeLocations = @('All'); excludeLocations = @('AllTrusted') })) `
-    -GrantControls (New-Grant -BuiltInControls @('block')) `
-    -State disabled
+    -GrantControls (New-Grant -BuiltInControls @('block'))
+
+$policies += New-Policy -DisplayName 'MSP-CA009-Registration-Block-Outside-TrustedLocations' `
+    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeRegistration, $ids.ExcludeLocation)) `
+        -Applications (New-ApplicationsScope -IncludeApplications @() -IncludeUserActions @('urn:user:registersecurityinfo')) `
+        -Locations ([ordered]@{ includeLocations = @('All'); excludeLocations = @('AllTrusted') })) `
+    -GrantControls (New-Grant -BuiltInControls @('block'))
 
 $policies += New-Policy -DisplayName 'MSP-CA100-Admins-Require-PhishingResistantMFA' `
     -Conditions (New-Conditions -Users (New-UserScope Admins -ExcludeGroups @($allGroup))) `
@@ -343,36 +355,16 @@ $policies += New-Policy -DisplayName 'MSP-CA102-Admins-Require-CompliantDevice' 
     -Conditions (New-Conditions -Users (New-UserScope Admins -ExcludeGroups @($allGroup, $ids.ExcludeCompliance)) `
         -Applications (New-ApplicationsScope -ExcludeApplications $intuneExclusions) `
         -Platforms ([ordered]@{ includePlatforms = @('windows', 'macOS'); excludePlatforms = @() })) `
-    -GrantControls (New-Grant -BuiltInControls @('compliantDevice')) `
-    -State disabled
+    -GrantControls (New-Grant -BuiltInControls @('compliantDevice'))
 
-$policies += New-Policy -DisplayName 'MSP-CA103-Admins-StrictLocation-CAE' `
-    -Conditions (New-Conditions -Users (New-UserScope Admins -ExcludeGroups @($allGroup, $ids.ExcludeCAE))) `
-    -SessionControls ([ordered]@{
-        continuousAccessEvaluation = [ordered]@{ mode = 'strictLocation' }
-    }) `
-    -State disabled
-
-$sensitiveActionPolicy = New-Policy -DisplayName 'MSP-CA104-Admins-SensitiveActions-Reauthenticate' `
-    -Conditions (New-Conditions -Users (New-UserScope Admins -ExcludeGroups @($allGroup)) `
-        -Applications (New-ApplicationsScope -IncludeApplications @() -IncludeAuthenticationContexts @('c1'))) `
-    -GrantControls (New-Grant -Operator AND -AuthenticationStrength $phishingResistantStrength) `
-    -SessionControls ([ordered]@{ signInFrequency = [ordered]@{
-        value = $null; type = $null; authenticationType = 'primaryAndSecondaryAuthentication';
-        frequencyInterval = 'everyTime'; isEnabled = $true
-    } }) `
-    -State disabled
-$sensitiveActionPolicy['AuthContextInfo'] = @([ordered]@{
-    id = 'c1'
-    displayName = 'MSP Sensitive Action'
-    description = 'Step-up authentication context for PIM activation and sensitive application operations.'
-    isAvailable = $true
-})
-$policies += $sensitiveActionPolicy
+$policies += New-Policy -DisplayName 'MSP-CA103-Admins-Block-Outside-TrustedLocations' `
+    -Conditions (New-Conditions -Users (New-UserScope Admins -ExcludeGroups @($allGroup, $ids.ExcludeLocation)) `
+        -Locations ([ordered]@{ includeLocations = @('All'); excludeLocations = @('AllTrusted') })) `
+    -GrantControls (New-Grant -BuiltInControls @('block'))
 
 $policies += New-Policy -DisplayName 'MSP-CA200-Guests-Require-MFA' `
     -Conditions (New-Conditions -Users (New-UserScope Guests -ExcludeGroups @($allGroup))) `
-    -GrantControls (New-Grant -Operator AND -AuthenticationStrength $mfaStrength)
+    -GrantControls (New-Grant -BuiltInControls @('mfa'))
 
 $policies += New-Policy -DisplayName 'MSP-CA201-Guests-Session-Hardening' `
     -Conditions (New-Conditions -Users (New-UserScope Guests -ExcludeGroups @($allGroup))) `
@@ -417,14 +409,6 @@ $policies += New-Policy -DisplayName 'MSP-CA302-Windows-Require-CompliantDevice'
         -Platforms ([ordered]@{ includePlatforms = @('windows'); excludePlatforms = @() })) `
     -GrantControls (New-Grant -BuiltInControls @('compliantDevice'))
 
-$policies += New-Policy -DisplayName 'MSP-CA310-Windows-Require-CompliantOrHybridJoined-Alternative' `
-    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeCompliance)) `
-        -Applications (New-ApplicationsScope -ExcludeApplications $intuneExclusions) `
-        -ClientAppTypes @('mobileAppsAndDesktopClients') `
-        -Platforms ([ordered]@{ includePlatforms = @('windows'); excludePlatforms = @() })) `
-    -GrantControls (New-Grant -BuiltInControls @('compliantDevice', 'domainJoinedDevice')) `
-    -State disabled
-
 $policies += New-Policy -DisplayName 'MSP-CA303-macOS-Require-CompliantDevice' `
     -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeCompliance)) `
         -Applications (New-ApplicationsScope -ExcludeApplications $intuneExclusions) `
@@ -432,28 +416,25 @@ $policies += New-Policy -DisplayName 'MSP-CA303-macOS-Require-CompliantDevice' `
         -Platforms ([ordered]@{ includePlatforms = @('macOS'); excludePlatforms = @() })) `
     -GrantControls (New-Grant -BuiltInControls @('compliantDevice'))
 
-$policies += New-Policy -DisplayName 'MSP-CA304-iOS-Require-CompliantDevice-Alternative' `
-    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeCompliance)) `
+$policies += New-Policy -DisplayName 'MSP-CA304-Managed-iOS-Require-CompliantDevice' `
+    -Conditions (New-Conditions -Users (New-UserScope ManagedMobile -ExcludeGroups @($allGroup, $ids.ExcludeCompliance)) `
         -Applications (New-ApplicationsScope -ExcludeApplications $intuneExclusions) `
         -ClientAppTypes @('mobileAppsAndDesktopClients') `
         -Platforms ([ordered]@{ includePlatforms = @('iOS'); excludePlatforms = @() })) `
-    -GrantControls (New-Grant -BuiltInControls @('compliantDevice')) `
-    -State disabled
+    -GrantControls (New-Grant -BuiltInControls @('compliantDevice'))
 
-$policies += New-Policy -DisplayName 'MSP-CA305-Android-Require-CompliantDevice-Alternative' `
-    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeCompliance)) `
+$policies += New-Policy -DisplayName 'MSP-CA305-Managed-Android-Require-CompliantDevice' `
+    -Conditions (New-Conditions -Users (New-UserScope ManagedMobile -ExcludeGroups @($allGroup, $ids.ExcludeCompliance)) `
         -Applications (New-ApplicationsScope -ExcludeApplications $intuneExclusions) `
         -ClientAppTypes @('mobileAppsAndDesktopClients') `
         -Platforms ([ordered]@{ includePlatforms = @('android'); excludePlatforms = @() })) `
-    -GrantControls (New-Grant -BuiltInControls @('compliantDevice')) `
-    -State disabled
+    -GrantControls (New-Grant -BuiltInControls @('compliantDevice'))
 
 $policies += New-Policy -DisplayName 'MSP-CA306-Linux-Require-CompliantDevice' `
     -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeCompliance)) `
         -Applications (New-ApplicationsScope -ExcludeApplications $intuneExclusions) `
         -Platforms ([ordered]@{ includePlatforms = @('linux'); excludePlatforms = @() })) `
-    -GrantControls (New-Grant -BuiltInControls @('compliantDevice')) `
-    -State disabled
+    -GrantControls (New-Grant -BuiltInControls @('compliantDevice'))
 
 $policies += New-Policy -DisplayName 'MSP-CA307-Windows-Require-TokenProtection' `
     -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeTokenProtection)) `
@@ -464,24 +445,13 @@ $policies += New-Policy -DisplayName 'MSP-CA307-Windows-Require-TokenProtection'
         secureSignInSession = [ordered]@{ '@odata.type' = '#microsoft.graph.secureSignInSessionControl'; isEnabled = $true }
     })
 
-$policies += New-Policy -DisplayName 'MSP-CA308-Apple-Require-TokenProtection-Preview' `
-    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeTokenProtection)) `
-        -Applications (New-ApplicationsScope -IncludeApplications $tokenProtectionResources) `
-        -ClientAppTypes @('mobileAppsAndDesktopClients') `
-        -Platforms ([ordered]@{ includePlatforms = @('iOS', 'macOS'); excludePlatforms = @() })) `
-    -SessionControls ([ordered]@{
-        secureSignInSession = [ordered]@{ '@odata.type' = '#microsoft.graph.secureSignInSessionControl'; isEnabled = $true }
-    }) `
-    -State disabled
-
-$policies += New-Policy -DisplayName 'MSP-CA309-M365-Browser-DefenderAppControl' `
+$policies += New-Policy -DisplayName 'MSP-CA309-M365-Browser-Monitor-With-DefenderAppControl' `
     -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeCloudAppSecurity)) `
         -Applications (New-ApplicationsScope -IncludeApplications @('Office365')) `
         -ClientAppTypes @('browser')) `
     -SessionControls ([ordered]@{
         cloudAppSecurity = [ordered]@{ cloudAppSecurityType = 'monitorOnly'; isEnabled = $true }
-    }) `
-    -State disabled
+    })
 
 $everyTime = [ordered]@{
     value = $null
@@ -506,8 +476,7 @@ $policies += New-Policy -DisplayName 'MSP-CA401-Risk-User-High-Require-Remediati
 $policies += New-Policy -DisplayName 'MSP-CA402-InsiderRisk-Elevated-Block' `
     -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeInsiderRisk)) `
         -InsiderRiskLevels 'elevated') `
-    -GrantControls (New-Grant -BuiltInControls @('block')) `
-    -State disabled
+    -GrantControls (New-Grant -BuiltInControls @('block'))
 
 $allWorkloadIdentities = [ordered]@{
     includeServicePrincipals = @('ServicePrincipalsInMyTenant')
@@ -524,72 +493,16 @@ $policies += New-Policy -DisplayName 'MSP-CA501-Workloads-Block-Outside-TrustedL
     -Conditions (New-Conditions -Applications (New-ApplicationsScope) `
         -ClientApplications $allWorkloadIdentities `
         -Locations ([ordered]@{ includeLocations = @('All'); excludeLocations = @('AllTrusted') })) `
-    -GrantControls (New-Grant -BuiltInControls @('block')) `
-    -State disabled
+    -GrantControls (New-Grant -BuiltInControls @('block'))
 
-$noneUsers = [ordered]@{
-    includeUsers = @('None')
-    excludeUsers = @()
-    includeGroups = @()
-    excludeGroups = @()
-    includeRoles = @()
-    excludeRoles = @()
-    includeGuestsOrExternalUsers = $null
-    excludeGuestsOrExternalUsers = $null
-}
-$allAgentIdentities = [ordered]@{
-    includeServicePrincipals = @()
-    includeAgentIdServicePrincipals = @('All')
-    excludeServicePrincipals = @()
-}
-$allAgentUsers = [ordered]@{
-    includeAgentUsers = @('All')
-    excludeAgentUsers = @()
-    agentFilter = $null
-}
-
-$policies += New-Policy -DisplayName 'MSP-CA700-Agents-HighRiskIdentities-Block-Preview' `
-    -Conditions (New-Conditions -Users $noneUsers `
-        -ClientApplications $allAgentIdentities `
-        -AgentIdRiskLevels 'high') `
-    -GrantControls (New-Grant -BuiltInControls @('block')) `
-    -State disabled
-
-$policies += New-Policy -DisplayName 'MSP-CA701-Agents-Block-AllAgentResources-Preview' `
-    -Conditions (New-Conditions -Users $noneUsers `
-        -Applications (New-ApplicationsScope -IncludeApplications @('AllAgentIdResources')) `
-        -ClientApplications $allAgentIdentities) `
-    -GrantControls (New-Grant -BuiltInControls @('block')) `
-    -State disabled
-
-$policies += New-Policy -DisplayName 'MSP-CA702-AgentUsers-Require-CompliantDevice-Preview' `
-    -Conditions (New-Conditions -Users $noneUsers `
-        -Agents $allAgentUsers `
-        -AgentContext ([ordered]@{
-            includeAgentContexts = @('agentUserSessionsInitiatedFromEndpoints')
-            excludeAgentContexts = @()
-        })) `
-    -GrantControls (New-Grant -BuiltInControls @('compliantDevice')) `
-    -State disabled
-
-$policies += New-Policy -DisplayName 'MSP-CA703-AgentUsers-RiskyAgents-Block-Preview' `
-    -Conditions (New-Conditions -Users $noneUsers `
-        -Agents $allAgentUsers `
-        -AgentIdRiskLevels 'medium,high') `
-    -GrantControls (New-Grant -BuiltInControls @('block')) `
-    -State disabled
-
-$policies += New-Policy -DisplayName 'MSP-CA704-AgentUsers-Block-Outside-TrustedLocations-Preview' `
-    -Conditions (New-Conditions -Users $noneUsers `
-        -Applications (New-ApplicationsScope -IncludeApplications @('AllAgentIdResources')) `
-        -Agents $allAgentUsers `
+$policies += New-Policy -DisplayName 'MSP-CA600-MFAExceptionAccounts-Block-Outside-TrustedLocations' `
+    -Conditions (New-Conditions -Users (New-UserScope MfaExceptionAccounts -ExcludeGroups @($allGroup, $ids.ExcludeLocation)) `
         -Locations ([ordered]@{ includeLocations = @('All'); excludeLocations = @('AllTrusted') })) `
-    -GrantControls (New-Grant -BuiltInControls @('block')) `
-    -State disabled
+    -GrantControls (New-Grant -BuiltInControls @('block'))
 
 foreach ($policy in $policies) {
     $fileName = '{0}.json' -f ($policy.displayName -replace '[\\/:*?"<>|]', '-')
-    $policy | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath (Join-Path $policyRoot $fileName) -Encoding utf8
+    Write-JsonFile -InputObject $policy -Path (Join-Path $policyRoot $fileName)
 }
 
 foreach ($key in $ids.Keys) {
@@ -605,7 +518,7 @@ foreach ($key in $ids.Keys) {
         securityEnabled = $true
         visibility     = $null
     }
-    $group | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $groupRoot "$($groupNames[$key]).json") -Encoding utf8
+    Write-JsonFile -InputObject $group -Path (Join-Path $groupRoot "$($groupNames[$key]).json") -Depth 10
 }
 
 $migrationObjects = foreach ($key in $ids.Keys) {
@@ -621,6 +534,6 @@ $migrationTable = [ordered]@{
     Objects     = @($migrationObjects)
     Organization = 'MSP CIPP Conditional Access Blueprint'
 }
-$migrationTable | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $configRoot 'MigrationTable.json') -Encoding utf8
+Write-JsonFile -InputObject $migrationTable -Path (Join-Path $configRoot 'MigrationTable.json') -Depth 10
 
 Write-Output "Generated $($policies.Count) Conditional Access policies and $($ids.Count) supporting groups in $RepositoryRoot"

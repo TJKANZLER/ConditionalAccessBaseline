@@ -3,9 +3,6 @@
   "displayName": "MSP-CA307-Windows-Require-TokenProtection",
   "state": "enabledForReportingButNotEnforced",
   "conditions": {
-    "userRiskLevels": [],
-    "signInRiskLevels": [],
-    "servicePrincipalRiskLevels": [],
     "clientAppTypes": [
       "mobileAppsAndDesktopClients"
     ],
@@ -21,7 +18,8 @@
     "applications": {
       "includeApplications": [
         "00000002-0000-0ff1-ce00-000000000000",
-        "00000003-0000-0ff1-ce00-000000000000"
+        "00000003-0000-0ff1-ce00-000000000000",
+        "cc15fd57-2c6c-4117-a88c-83b1d56b4bbe"
       ],
       "excludeApplications": [],
       "includeUserActions": [],
@@ -39,7 +37,9 @@
         "10000000-0000-4000-8000-000000000011"
       ],
       "includeRoles": [],
-      "excludeRoles": [],
+      "excludeRoles": [
+        "d29b2b05-8046-44ba-8758-1e26182fcf32"
+      ],
       "includeGuestsOrExternalUsers": null,
       "excludeGuestsOrExternalUsers": {
         "@odata.type": "#microsoft.graph.conditionalAccessGuestsOrExternalUsers",
@@ -49,10 +49,7 @@
           "membershipKind": "all"
         }
       }
-    },
-    "clientApplications": null,
-    "agents": null,
-    "agentContext": null
+    }
   },
   "grantControls": null,
   "sessionControls": {

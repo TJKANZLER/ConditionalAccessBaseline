@@ -1,16 +1,20 @@
 {
   "@odata.type": "#microsoft.graph.conditionalAccessPolicy",
-  "displayName": "MSP-CA700-Agents-HighRiskIdentities-Block-Preview",
-  "state": "disabled",
+  "displayName": "MSP-CA600-MFAExceptionAccounts-Block-Outside-TrustedLocations",
+  "state": "enabledForReportingButNotEnforced",
   "conditions": {
-    "userRiskLevels": [],
-    "signInRiskLevels": [],
-    "servicePrincipalRiskLevels": [],
     "clientAppTypes": [
       "all"
     ],
     "platforms": null,
-    "locations": null,
+    "locations": {
+      "includeLocations": [
+        "All"
+      ],
+      "excludeLocations": [
+        "AllTrusted"
+      ]
+    },
     "devices": null,
     "authenticationFlows": null,
     "applications": {
@@ -23,27 +27,20 @@
       "applicationFilter": null
     },
     "users": {
-      "includeUsers": [
-        "None"
-      ],
+      "includeUsers": [],
       "excludeUsers": [],
-      "includeGroups": [],
-      "excludeGroups": [],
+      "includeGroups": [
+        "10000000-0000-4000-8000-000000000002"
+      ],
+      "excludeGroups": [
+        "10000000-0000-4000-8000-000000000001",
+        "10000000-0000-4000-8000-000000000010"
+      ],
       "includeRoles": [],
       "excludeRoles": [],
       "includeGuestsOrExternalUsers": null,
       "excludeGuestsOrExternalUsers": null
-    },
-    "clientApplications": {
-      "includeServicePrincipals": [],
-      "includeAgentIdServicePrincipals": [
-        "All"
-      ],
-      "excludeServicePrincipals": []
-    },
-    "agents": null,
-    "agentContext": null,
-    "agentIdRiskLevels": "high"
+    }
   },
   "grantControls": {
     "operator": "OR",

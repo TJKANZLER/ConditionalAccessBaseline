@@ -1,102 +1,78 @@
-# CIPP Conditional Access Blueprint
+# Shoothill CIPP Conditional Access Baseline
 
-A comprehensive, deduplicated Microsoft Entra Conditional Access library for CIPP. It covers human identities, administrators, guests, managed and unmanaged devices, token theft, identity risk, insider risk, workload identities, network restrictions, session controls, authentication flows, and Agent 365 preview scenarios.
+A production-focused Microsoft Entra Conditional Access suite for repeatable deployment through CIPP. It contains **30 policies and 15 supporting groups**. Every policy starts in **Report-only**.
 
-The library contains **37 policies and 16 supporting groups**. Completeness does not mean every policy should be enabled: 19 broadly deployable policies start in **Report-only**, while 18 dependency-heavy, alternative, restrictive, or preview policies start **Disabled**.
+The suite has a complete Entra ID P1/Intune foundation and explicit production packages for Entra ID Protection P2, Workload ID Premium, Defender for Cloud Apps, and Purview Adaptive Protection.
 
-## Coverage
+Preview controls, conflicting alternatives, and inert tenant-specific scaffolding are not shipped. Licence- or capability-dependent controls remain available through clearly named packages with enforceable readiness gates.
 
-| Module | Policies | Initial posture |
+## Activation packages
+
+Package membership is defined in [Config/PolicyPackages.psd1](Config/PolicyPackages.psd1) and validated by the test suite.
+
+| CIPP package | Policies | Activation gate |
 |---|---:|---|
-| Foundation, administrators, and guests | 16 | 11 Report-only; 5 Disabled advanced controls |
-| Intune, unmanaged access, and token protection | 11 | 5 Report-only; 6 Disabled alternatives/integrations |
-| User and insider risk | 3 | 2 Report-only; insider-risk policy Disabled |
-| Workload identities | 2 | High-risk block Report-only; location restriction Disabled |
-| Agent identities and agent users | 5 | Disabled because the surface is Preview |
-| **Total** | **37** | **19 Report-only; 18 Disabled** |
+| `SHOOTHILL-CA-01-Identity-Foundation-P1` | 5 | Emergency access, MFA, TAP, legacy-auth and device-code readiness |
+| `SHOOTHILL-CA-02-Privileged-Access-P1-Intune` | 3 | Phishing-resistant methods and compliant admin workstations |
+| `SHOOTHILL-CA-03-External-Collaboration-P1` | 3 | Guest collaboration and approved guest-admin testing |
+| `SHOOTHILL-CA-04-Endpoint-and-App-Protection-Intune` | 9 | MAM, compliance, platform support, and compatible token clients |
+| `SHOOTHILL-CA-05-Trusted-Location-Guardrails-P1` | 3 | Trusted egress for admins, registration, and MFA-exempt accounts |
+| `SHOOTHILL-CA-06-Closed-Network-Perimeter-P1` | 1 | Formally adopted office-only or always-on secure-access model |
+| `SHOOTHILL-CA-07-Identity-Protection-P2` | 2 | P2 licensing, SSPR, and risk-response operations |
+| `SHOOTHILL-CA-08-Workload-Identity-Premium` | 2 | Workload ID Premium and service-principal location inventory |
+| `SHOOTHILL-CA-09-Defender-and-Purview-Advanced` | 2 | Defender App Control plus Purview/HR/legal governance |
 
-## Documentation
+These are activation gates, not “core/optional/lab” labels. A package is promoted from Report-only only when its stated dependency is true for that tenant.
 
-| Doc | What's in it |
-|---|---|
-| [POLICY-MATRIX.md](POLICY-MATRIX.md) | Every policy's scope, license tier, dependency, and overlap rule |
-| [POLICY-GUIDE.md](POLICY-GUIDE.md) | What each policy does in plain English, plus the issues it tends to cause and how to solve them |
-| [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | How to diagnose a sign-in failure once it happens — sign-in logs, AADSTS error codes, exclusion-group checklist |
-| [DEPLOYMENT.md](DEPLOYMENT.md) | Phased rollout order, per-phase gates, and rollback guidance |
-| [SOURCE-MAPPING.md](SOURCE-MAPPING.md) | Which frameworks were reviewed and what was deliberately changed or excluded for this library |
-| [CHANGELOG.md](CHANGELOG.md) | Version history |
+## Safety and portability decisions
 
-## Design principles
+- Emergency-access accounts are mapped through `MSP-CA-Exclude-All-EmergencyAccess`. Use two cloud-only accounts, monitor membership, and test them regularly.
+- Microsoft Entra Connect identities holding the built-in **Directory Synchronization Accounts** role are excluded from all-user policy scopes.
+- CA005 excludes Microsoft Entra Device Registration Service, preventing device-code blocking from breaking device registration.
+- CIPP/GDAP `serviceProvider` identities are excluded from human and guest scopes.
+- CA307 targets only supported native-client resources: Exchange Online, SharePoint Online, and Microsoft Teams Services. It never targets browsers or the whole Office 365 bundle.
+- CA009, CA103, and CA600 use trusted locations for registration, administrators, and MFA-exempt user service accounts. CA008 is isolated in the closed-network package because it has the largest lockout radius.
+- Intune enrollment applications are excluded from device-compliance grants to avoid an enrollment deadlock.
+- Temporary exception groups start empty. Every member needs an owner, reason, expiry, and review date.
 
-- Nothing starts On.
-- Internal MFA excludes external identities; dedicated guest policies own guest authentication.
-- Administrator phishing-resistant MFA intentionally layers over ordinary MFA.
-- Mobile App Protection and mobile device-compliance templates are alternatives; the compliance alternatives remain Disabled.
-- Device compliance protects desktop clients while app-enforced restrictions preserve controlled browser access from unmanaged devices.
-- `MSP-CA-Exclude-DeviceCompliance` is intentionally shared by every compliant-device grant control (CA102, CA302-306, CA310) because they enforce the same control; the unknown-platform block (CA007) and unmanaged-browser restriction (CA301) enforce different controls and therefore own dedicated exception groups so membership in one doesn't silently bypass the other.
-- CA310 is a Disabled alternative to CA302 for environments that rely on hybrid Azure AD join rather than full Intune compliance; do not enable both without intent, same as the CA300/CA304/CA305 mobile alternatives.
-- Risk policies use current self-remediation guidance instead of blanket user blocking, and exclude the same temporary service-account group as baseline MFA so an account exempted from CA002 isn't still challenged by the risk policies it can't complete.
-- Token protection is limited to supported Exchange Online and SharePoint Online native-client scenarios.
-- The retired **Require approved client app** control is never used.
-- CIPP/GDAP `serviceProvider` identities are excluded from human and administrator personas and omitted from the guest persona.
-- Country lists, selected sensitive applications, and Terms of Use IDs remain tenant data, not guessed universal values.
+## Repository layout
 
-## Required preparation
+```text
+Config/
+  ConditionalAccess/   30 CIPP Conditional Access templates
+  Groups/              15 portable security-group templates
+  MigrationTable.json  stable template-ID mappings
+  PolicyPackages.psd1  exact package membership and readiness gates
+tools/
+  New-CippCaBlueprint.ps1
+  Test-CippCaBlueprint.ps1
+```
 
-1. Create and test at least two cloud-only emergency-access accounts.
-2. Import the group templates and add only those accounts to `MSP-CA-Exclude-All-EmergencyAccess`.
-3. Alert on every membership change to the emergency-access group.
-4. Register users for MFA and administrators for passkeys/FIDO2, Windows Hello for Business, or certificate-based authentication.
-5. Establish Temporary Access Pass procedures for passwordless bootstrapping.
-6. Configure the CIPP service-provider exception for GDAP deployments.
-7. Deploy compatible Intune compliance and App Protection policies before the managed-device tier.
-8. Confirm licenses and prerequisites for P2, Purview, Defender for Cloud Apps, Workload ID, Global Secure Access, or Agent 365 modules.
+`MigrationTable.json` is metadata and is not a selectable template.
 
-## CIPP import
+## Import and deploy through CIPP
 
-1. Publish this folder as a GitHub repository.
-2. In CIPP, open **Tools → Community Repositories → Find a Repository** and add `owner/repository`.
-3. Import the 16 files under `Config/Groups` first.
-4. Import the 37 files under `Config/ConditionalAccess` next.
-5. Do not select `Config/MigrationTable.json`; CIPP reads it while importing the CA templates.
-6. Deploy only the appropriate module through **Tenant → Conditional Access → Policies → Deploy Template**.
-7. Retain the template state, display-name replacement, group creation, and CIPP service-provider exception.
-8. Follow [DEPLOYMENT.md](DEPLOYMENT.md) before moving any policy to On.
+1. Add `TJKANZLER/ConditionalAccessBaseline` under **Tools → Community Repositories**.
+2. Import `Config/Groups` before `Config/ConditionalAccess`.
+3. Confirm CIPP applies `Config/MigrationTable.json` mappings and that every policy resolves its group references.
+4. Keep all imported policies Report-only.
+5. In **Available Conditional Access Templates**, assign the policies to the nine package names in `Config/PolicyPackages.psd1`.
+6. In a CIPP Standards template, add **Conditional Access Template**, select a package, choose Report-only, enable **Create Groups**, and disable Security Defaults only as part of the controlled CA rollout.
+7. Review report-only sign-ins and complete the package readiness gate before changing policy state.
 
-## Tenant-specific items that cannot be universalized
+CIPP package tags are local CIPP metadata; GitHub template JSON cannot safely embed them in the Microsoft Graph policy payload. If the installed CIPP table does not show **Add to package**, use the manifest to select all policies for one package in the multi-select Conditional Access standard. Do not create one catch-all package.
 
-- Allowed or blocked countries and customer IP ranges.
-- Approved guest applications and sensitive line-of-business application IDs.
-- Terms of Use document IDs.
-- Direct workload-identity exceptions for individual service principals.
-- Authentication-context integration with PIM and applications.
-- Global Secure Access signaling and compliant-network location configuration.
-- Legacy user-based service accounts; migrate these to managed identities, workload federation, or service principals.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the rollout runbook, [POLICY-MATRIX.md](POLICY-MATRIX.md) for exact coverage, and [POLICY-GUIDE.md](POLICY-GUIDE.md) for operator impact.
 
-The library includes safe Disabled scaffolding where Graph supports portable selectors such as `AllTrusted` or `ServicePrincipalsInMyTenant`. It does not invent customer-specific identifiers.
+## Validate or regenerate
 
-## Validation
-
-Regenerate and validate with PowerShell 7:
+PowerShell 7 is recommended:
 
 ```powershell
 ./tools/New-CippCaBlueprint.ps1
 ./tools/Test-CippCaBlueprint.ps1
 ```
 
-Validation checks JSON parsing, unique names, safe initial states, CIPP object identification, repository-safe JSON layout, migration mappings, guest/service-provider separation, risk-policy construction, optional-policy safety, token-protection scope, and retired controls.
+The validator checks counts, JSON parsing, Report-only state, group mappings, complete and non-overlapping package membership, directory-sync exclusion, Device Registration Service exclusion, token-protection scope, preview-field absence, and retired approved-client-app controls.
 
-## Sources
-
-- [Microsoft Conditional Access deployment planning](https://learn.microsoft.com/en-us/entra/identity/conditional-access/plan-conditional-access)
-- [Microsoft Conditional Access policy model](https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-conditional-access-policies)
-- [Microsoft risk policy recommendations](https://learn.microsoft.com/en-us/entra/id-protection/howto-identity-protection-configure-risk-policies)
-- [Microsoft token protection](https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-token-protection)
-- [Microsoft Conditional Access for workload identities](https://learn.microsoft.com/en-us/entra/identity/conditional-access/workload-identity)
-- [Microsoft Conditional Access for agents](https://learn.microsoft.com/en-us/entra/identity/conditional-access/howto-target-agent-identities)
-- [CIPP Conditional Access Baseline](https://github.com/j0eyv/ConditionalAccessBaseline)
-- [ITProMentor SMB baseline](https://github.com/vanvfields/Microsoft-365/blob/master/mggraph-samples/Install-SmbConditionalAccessPolicies.ps1)
-- [AlexFilipin Conditional Access as Code](https://github.com/AlexFilipin/ConditionalAccess)
-- [Microsoft Zero Trust resources](https://github.com/microsoft/ConditionalAccessforZeroTrustResources)
-
-Review the library at least quarterly and whenever Microsoft changes a Conditional Access control, platform status, licensing requirement, or Graph schema.
+Review the baseline quarterly and whenever Microsoft changes Conditional Access behavior, licensing, supported token-protection resources, or CIPP's template schema.

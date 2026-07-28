@@ -1,26 +1,28 @@
 {
   "@odata.type": "#microsoft.graph.conditionalAccessPolicy",
-  "displayName": "MSP-CA006-Global-Block-AuthenticationTransfer",
+  "displayName": "MSP-CA009-Registration-Block-Outside-TrustedLocations",
   "state": "enabledForReportingButNotEnforced",
   "conditions": {
-    "userRiskLevels": [],
-    "signInRiskLevels": [],
-    "servicePrincipalRiskLevels": [],
     "clientAppTypes": [
       "all"
     ],
     "platforms": null,
-    "locations": null,
-    "devices": null,
-    "authenticationFlows": {
-      "transferMethods": "authenticationTransfer"
-    },
-    "applications": {
-      "includeApplications": [
+    "locations": {
+      "includeLocations": [
         "All"
       ],
+      "excludeLocations": [
+        "AllTrusted"
+      ]
+    },
+    "devices": null,
+    "authenticationFlows": null,
+    "applications": {
+      "includeApplications": [],
       "excludeApplications": [],
-      "includeUserActions": [],
+      "includeUserActions": [
+        "urn:user:registersecurityinfo"
+      ],
       "includeAuthenticationContextClassReferences": [],
       "applicationFilter": null
     },
@@ -32,23 +34,23 @@
       "includeGroups": [],
       "excludeGroups": [
         "10000000-0000-4000-8000-000000000001",
-        "10000000-0000-4000-8000-000000000004"
+        "10000000-0000-4000-8000-000000000005",
+        "10000000-0000-4000-8000-000000000010"
       ],
       "includeRoles": [],
-      "excludeRoles": [],
+      "excludeRoles": [
+        "d29b2b05-8046-44ba-8758-1e26182fcf32"
+      ],
       "includeGuestsOrExternalUsers": null,
       "excludeGuestsOrExternalUsers": {
         "@odata.type": "#microsoft.graph.conditionalAccessGuestsOrExternalUsers",
-        "guestOrExternalUserTypes": "serviceProvider",
+        "guestOrExternalUserTypes": "internalGuest,b2bCollaborationGuest,b2bCollaborationMember,b2bDirectConnectUser,otherExternalUser",
         "externalTenants": {
           "@odata.type": "#microsoft.graph.conditionalAccessAllExternalTenants",
           "membershipKind": "all"
         }
       }
-    },
-    "clientApplications": null,
-    "agents": null,
-    "agentContext": null
+    }
   },
   "grantControls": {
     "operator": "OR",

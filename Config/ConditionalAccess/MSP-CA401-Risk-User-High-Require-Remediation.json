@@ -3,11 +3,6 @@
   "displayName": "MSP-CA401-Risk-User-High-Require-Remediation",
   "state": "enabledForReportingButNotEnforced",
   "conditions": {
-    "userRiskLevels": [
-      "high"
-    ],
-    "signInRiskLevels": [],
-    "servicePrincipalRiskLevels": [],
     "clientAppTypes": [
       "all"
     ],
@@ -36,7 +31,9 @@
         "10000000-0000-4000-8000-000000000002"
       ],
       "includeRoles": [],
-      "excludeRoles": [],
+      "excludeRoles": [
+        "d29b2b05-8046-44ba-8758-1e26182fcf32"
+      ],
       "includeGuestsOrExternalUsers": null,
       "excludeGuestsOrExternalUsers": {
         "@odata.type": "#microsoft.graph.conditionalAccessGuestsOrExternalUsers",
@@ -47,9 +44,9 @@
         }
       }
     },
-    "clientApplications": null,
-    "agents": null,
-    "agentContext": null
+    "userRiskLevels": [
+      "high"
+    ]
   },
   "grantControls": {
     "operator": "OR",
