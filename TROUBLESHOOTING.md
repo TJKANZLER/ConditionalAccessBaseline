@@ -28,7 +28,7 @@ GitHub package membership is documented in `Config/PolicyPackages.psd1`, but CIP
 | AADSTS50076 / AADSTS50079 | CA002, CA003, CA004, CA100, CA200 | Registered methods, TAP bootstrap, and phishing-resistant method availability |
 | AADSTS53000 / AADSTS53001 | CA102, CA302–CA306 | Intune enrollment, current compliance state, managed-mobile membership, and platform match |
 | AADSTS53003 | Any enforced CA policy | Sign-in log → Conditional Access tab → failed policy and unmet control |
-| AADSTS50131 or widespread location blocks | CA008 | Source IP, trusted flag, VPN/ZTNA egress, and named-location contents |
+| AADSTS50131 or location-based blocks | CA009, CA103, CA600 | Source IP, trusted flag, VPN/ZTNA egress, and named-location contents |
 | Native Microsoft 365 clients fail but browsers work | CA307 | Supported client version, registered device/PRT, and token-protection result |
 | Mobile Office app fails | CA300 | App Protection assignment, supported app, broker, and user licensing |
 | Browser can view but cannot download | CA301 | Expected behavior on noncompliant devices; verify app-enforced restrictions |
@@ -47,7 +47,7 @@ GitHub package membership is documented in `Config/PolicyPackages.psd1`, but CIP
 
 ## Location lockout
 
-Use a prevalidated emergency-access account, move CA008 to Report-only, and confirm recovery. Then verify every named location used by `AllTrusted` is marked trusted and contains the current public egress addresses. Test trusted and untrusted paths before re-enforcement.
+Use a prevalidated emergency-access account, return the failing location policy to Report-only, and confirm recovery. Then verify every named location used by `AllTrusted` is marked trusted and contains the current public egress addresses. Test trusted and untrusted paths before re-enforcement.
 
 ## Device compliance deadlock
 

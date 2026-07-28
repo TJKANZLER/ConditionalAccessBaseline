@@ -1,43 +1,29 @@
 @{
-    SchemaVersion = '2.0'
+    SchemaVersion = '3.0'
     Packages = @(
         @{
-            Name = 'SHOOTHILL-CA-01-Identity-Foundation-P1'
-            Purpose = 'Universal identity controls for every managed tenant with Entra ID P1.'
-            ReadinessGate = 'Emergency access, MFA registration, legacy-auth inventory, TAP onboarding, and device-code inventory are complete.'
+            Name = 'SHOOTHILL-CA-01-Core-Identity-and-External-Access-P1'
+            Purpose = 'Universal identity, registration, authentication-flow, and guest controls for every managed Entra ID P1 tenant.'
+            ReadinessGate = 'Emergency access, MFA registration, TAP onboarding, legacy-auth/device-code inventory, and representative B2B collaboration are complete.'
             Policies = @(
                 'MSP-CA001-Global-Block-LegacyAuthentication'
                 'MSP-CA002-Global-Require-MFA'
                 'MSP-CA003-Global-Protect-SecurityInfoRegistration'
                 'MSP-CA004-Global-Protect-DeviceRegistration'
                 'MSP-CA005-Global-Block-DeviceCodeFlow'
-            )
-        }
-        @{
-            Name = 'SHOOTHILL-CA-02-Privileged-Access-P1-Intune'
-            Purpose = 'Phishing-resistant, short-lived, managed-device access for Microsoft administrator roles.'
-            ReadinessGate = 'Admins have phishing-resistant methods, separate admin identities, and compliant privileged workstations.'
-            Policies = @(
-                'MSP-CA100-Admins-Require-PhishingResistantMFA'
-                'MSP-CA101-Admins-Session-Hardening'
-                'MSP-CA102-Admins-Require-CompliantDevice'
-            )
-        }
-        @{
-            Name = 'SHOOTHILL-CA-03-External-Collaboration-P1'
-            Purpose = 'MFA, session, and admin-portal controls for guest and external identities.'
-            ReadinessGate = 'Representative B2B collaboration and every approved guest-admin workflow are tested.'
-            Policies = @(
                 'MSP-CA200-Guests-Require-MFA'
                 'MSP-CA201-Guests-Session-Hardening'
                 'MSP-CA202-Guests-Block-AdminPortals'
             )
         }
         @{
-            Name = 'SHOOTHILL-CA-04-Endpoint-and-App-Protection-Intune'
-            Purpose = 'Supported-platform enforcement, MAM, unmanaged-browser restrictions, device compliance, and token protection.'
-            ReadinessGate = 'Intune App Protection and compliance exist for every targeted platform; managed-mobile membership and supported clients are verified.'
+            Name = 'SHOOTHILL-CA-02-Privileged-Endpoint-and-App-Protection'
+            Purpose = 'Administrator, supported-platform, Intune MAM/compliance, unmanaged-browser, and Windows token controls.'
+            ReadinessGate = 'Admins have phishing-resistant methods and compliant workstations; every targeted Intune platform, MAM flow, managed-mobile assignment, and supported client is verified.'
             Policies = @(
+                'MSP-CA100-Admins-Require-PhishingResistantMFA'
+                'MSP-CA101-Admins-Session-Hardening'
+                'MSP-CA102-Admins-Require-CompliantDevice'
                 'MSP-CA007-Global-Block-UnknownOrUnsupportedPlatforms'
                 'MSP-CA300-Mobile-Require-AppProtection'
                 'MSP-CA301-UnmanagedBrowser-Restrict-Downloads'
@@ -50,8 +36,8 @@
             )
         }
         @{
-            Name = 'SHOOTHILL-CA-05-Trusted-Location-Guardrails-P1'
-            Purpose = 'Trusted-location enforcement for privileged access, registration, and MFA-exempt user service accounts.'
+            Name = 'SHOOTHILL-CA-03-Trusted-Location-Guardrails-P1'
+            Purpose = 'Trusted-location enforcement for privileged access, security-info registration, and MFA-exempt user service accounts.'
             ReadinessGate = 'Every admin, registration, service-account, VPN, ZTNA, and recovery egress is represented by a tested trusted named location.'
             Policies = @(
                 'MSP-CA009-Registration-Block-Outside-TrustedLocations'
@@ -60,15 +46,7 @@
             )
         }
         @{
-            Name = 'SHOOTHILL-CA-06-Closed-Network-Perimeter-P1'
-            Purpose = 'All-human trusted-location boundary for office-only or always-on secure-access tenants.'
-            ReadinessGate = 'The tenant has formally adopted a closed-network model and every legitimate public egress and recovery path is tested.'
-            Policies = @(
-                'MSP-CA008-Global-Block-Outside-TrustedLocations'
-            )
-        }
-        @{
-            Name = 'SHOOTHILL-CA-07-Identity-Protection-P2'
+            Name = 'SHOOTHILL-CA-04-Identity-Protection-P2'
             Purpose = 'Automated sign-in and user-risk remediation using Entra ID Protection.'
             ReadinessGate = 'Every in-scope user has Entra ID P2 or Entra Suite, SSPR writeback works where required, and the risk help-desk process is tested.'
             Policies = @(
@@ -77,7 +55,7 @@
             )
         }
         @{
-            Name = 'SHOOTHILL-CA-08-Workload-Identity-Premium'
+            Name = 'SHOOTHILL-CA-05-Workload-Identity-Premium'
             Purpose = 'Risk and network controls for tenant-owned service principals.'
             ReadinessGate = 'Workload ID Premium is licensed and every service-principal execution location is inventoried.'
             Policies = @(
@@ -86,7 +64,7 @@
             )
         }
         @{
-            Name = 'SHOOTHILL-CA-09-Defender-and-Purview-Advanced'
+            Name = 'SHOOTHILL-CA-06-Defender-and-Purview-Advanced'
             Purpose = 'Defender for Cloud Apps session monitoring and Purview Adaptive Protection enforcement.'
             ReadinessGate = 'Defender App Control is integrated; Entra ID P2 and Purview Adaptive Protection are licensed; HR/legal governance and incident handling are approved and tested.'
             Policies = @(

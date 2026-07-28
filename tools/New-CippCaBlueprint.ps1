@@ -326,11 +326,6 @@ $policies += New-Policy -DisplayName 'MSP-CA007-Global-Block-UnknownOrUnsupporte
         })) `
     -GrantControls (New-Grant -BuiltInControls @('block'))
 
-$policies += New-Policy -DisplayName 'MSP-CA008-Global-Block-Outside-TrustedLocations' `
-    -Conditions (New-Conditions -Users (New-UserScope AllHuman -ExcludeGroups @($allGroup, $ids.ExcludeLocation)) `
-        -Locations ([ordered]@{ includeLocations = @('All'); excludeLocations = @('AllTrusted') })) `
-    -GrantControls (New-Grant -BuiltInControls @('block'))
-
 $policies += New-Policy -DisplayName 'MSP-CA009-Registration-Block-Outside-TrustedLocations' `
     -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeRegistration, $ids.ExcludeLocation)) `
         -Applications (New-ApplicationsScope -IncludeApplications @() -IncludeUserActions @('urn:user:registersecurityinfo')) `

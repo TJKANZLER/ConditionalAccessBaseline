@@ -15,7 +15,7 @@ The suite maps security objectives to explicit production paths by licence and o
 | Desktop access | Microsoft Intune compliance guidance | Separate Windows, macOS, and Linux compliance policies |
 | Unmanaged browser | Microsoft app-enforced restrictions | Restrict Exchange/SharePoint downloads on noncompliant devices |
 | Token replay | Microsoft Token Protection guidance | Windows GA only; Exchange, SharePoint, and Microsoft Teams Services native clients |
-| Network boundary | Microsoft location-based CA guidance | Normal guardrails for admins/registration/service accounts plus an isolated closed-network perimeter |
+| Network boundary | Microsoft location-based CA guidance | Trusted-location guardrails for admins, registration, and MFA-exempt service accounts without a global remote-user block |
 | Identity risk | Microsoft Entra ID Protection | Separate sign-in and user-risk remediation policies in a P2 package |
 | Workload identities | Microsoft workload Conditional Access | Risk and location controls in a Workload ID Premium package |
 | Advanced sessions and risk | Microsoft Defender for Cloud Apps and Purview | Defender monitoring and insider-risk enforcement in an integration-gated package |

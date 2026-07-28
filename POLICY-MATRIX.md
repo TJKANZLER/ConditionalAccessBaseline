@@ -1,18 +1,15 @@
 # Conditional Access policy matrix
 
-All 30 policies start Report-only. Package prerequisites determine applicability; there are no lab templates or disabled placeholders.
+All 29 policies start Report-only. Package prerequisites determine applicability; there are no lab templates or disabled placeholders.
 
 | Package | Policies | Production coverage |
 |---:|---|---|
-| 01 Identity Foundation P1 | CA001–CA005 | Legacy authentication, all-user MFA, security-info registration, device registration, device-code flow |
-| 02 Privileged Access | CA100–CA102 | Phishing-resistant admin MFA, session hardening, compliant admin devices |
-| 03 External Collaboration | CA200–CA202 | Guest MFA, guest session hardening, guest admin-portal block |
-| 04 Endpoint and App Protection | CA007, CA300–CA307 | Unsupported platforms, mobile MAM, unmanaged browsers, Windows/macOS/iOS/Android/Linux compliance, Windows token protection |
-| 05 Trusted Location Guardrails | CA009, CA103, CA600 | Registration, administrator, and MFA-exempt service-account locations |
-| 06 Closed Network Perimeter | CA008 | All-human trusted-location boundary |
-| 07 Identity Protection P2 | CA400–CA401 | Sign-in risk MFA and high user-risk remediation |
-| 08 Workload Identity Premium | CA500–CA501 | Service-principal risk and location controls |
-| 09 Defender and Purview | CA309, CA402 | Defender App Control monitoring and insider-risk enforcement |
+| 01 Core Identity and External Access | CA001–CA005, CA200–CA202 | Authentication, registration, device-code, and guest controls |
+| 02 Privileged, Endpoint and App Protection | CA007, CA100–CA102, CA300–CA307 | Administrator, platform, MAM, browser, compliance, and token controls |
+| 03 Trusted Location Guardrails | CA009, CA103, CA600 | Registration, administrator, and MFA-exempt service-account locations |
+| 04 Identity Protection P2 | CA400–CA401 | Sign-in risk MFA and high user-risk remediation |
+| 05 Workload Identity Premium | CA500–CA501 | Service-principal risk and location controls |
+| 06 Defender and Purview | CA309, CA402 | Defender App Control monitoring and insider-risk enforcement |
 
 ## Exact policies
 
@@ -24,7 +21,6 @@ All 30 policies start Report-only. Package prerequisites determine applicability
 | CA004 | Require MFA for device registration | Enrollment testing |
 | CA005 | Block device-code flow | CLI and Teams-device inventory |
 | CA007 | Block unknown or unsupported platforms | Supported-platform decision |
-| CA008 | Block all-human access outside trusted locations | Closed-network operating model |
 | CA009 | Block security-info registration outside trusted locations | Trusted registration paths |
 | CA100 | Require phishing-resistant MFA for admins | Resistant methods for 14 recommended roles |
 | CA101 | Harden admin sessions | Separate admin identities |

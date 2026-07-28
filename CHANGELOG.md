@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.1.0 — 2026-07-28
+
+- Consolidated nine narrowly split packages into six operational packages aligned to real deployment and licence boundaries.
+- Merged identity foundation with external collaboration, and privileged access with endpoint/app protection.
+- Removed the one-policy closed-network perimeter package and CA008; retained safer location guardrails for administrators, registration, and MFA-exempt service accounts.
+- Updated package validation and all operator documentation for the 29-policy, six-package suite.
+
 ## 3.0.0 — 2026-07-28
 
 - Rebuilt the library as a deterministic, licence-aware production suite: 30 Report-only policies and 15 supporting groups.

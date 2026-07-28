@@ -45,8 +45,8 @@ foreach ($duplicate in $policies | Group-Object displayName | Where-Object Count
     $errors.Add("Duplicate policy display name: $($duplicate.Name)")
 }
 
-if ($policies.Count -ne 30) {
-    $errors.Add("Expected 30 Conditional Access policies but found $($policies.Count)")
+if ($policies.Count -ne 29) {
+    $errors.Add("Expected 29 Conditional Access policies but found $($policies.Count)")
 }
 
 $migration = Get-Content -LiteralPath $migrationPath -Raw | ConvertFrom-Json -Depth 20
@@ -209,19 +209,16 @@ if (-not (Test-Path -LiteralPath $packagePath)) {
 else {
     $packageManifest = Import-PowerShellDataFile -LiteralPath $packagePath
     $packages = @($packageManifest.Packages)
-    if ($packages.Count -ne 9) {
-        $errors.Add("Expected nine activation packages but found $($packages.Count).")
+    if ($packages.Count -ne 6) {
+        $errors.Add("Expected six activation packages but found $($packages.Count).")
     }
     $expectedPackageNames = @(
-        'SHOOTHILL-CA-01-Identity-Foundation-P1'
-        'SHOOTHILL-CA-02-Privileged-Access-P1-Intune'
-        'SHOOTHILL-CA-03-External-Collaboration-P1'
-        'SHOOTHILL-CA-04-Endpoint-and-App-Protection-Intune'
-        'SHOOTHILL-CA-05-Trusted-Location-Guardrails-P1'
-        'SHOOTHILL-CA-06-Closed-Network-Perimeter-P1'
-        'SHOOTHILL-CA-07-Identity-Protection-P2'
-        'SHOOTHILL-CA-08-Workload-Identity-Premium'
-        'SHOOTHILL-CA-09-Defender-and-Purview-Advanced'
+        'SHOOTHILL-CA-01-Core-Identity-and-External-Access-P1'
+        'SHOOTHILL-CA-02-Privileged-Endpoint-and-App-Protection'
+        'SHOOTHILL-CA-03-Trusted-Location-Guardrails-P1'
+        'SHOOTHILL-CA-04-Identity-Protection-P2'
+        'SHOOTHILL-CA-05-Workload-Identity-Premium'
+        'SHOOTHILL-CA-06-Defender-and-Purview-Advanced'
     )
     foreach ($expectedName in $expectedPackageNames) {
         if ($expectedName -notin @($packages.Name)) {
@@ -256,4 +253,4 @@ if ($errors.Count -gt 0) {
     exit 1
 }
 
-Write-Output "PASS: 30 production policies (all Report-only), 15 groups, nine complete capability packages, safe CIPP layout, and validated Microsoft dependencies."
+Write-Output "PASS: 29 production policies (all Report-only), 15 groups, six complete capability packages, safe CIPP layout, and validated Microsoft dependencies."
