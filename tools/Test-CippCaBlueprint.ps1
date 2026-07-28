@@ -8,6 +8,7 @@ $policyRoot = Join-Path $RepositoryRoot 'Config\ConditionalAccess'
 $groupRoot = Join-Path $RepositoryRoot 'Config\Groups'
 $migrationPath = Join-Path $RepositoryRoot 'Config\MigrationTable.json'
 $packagePath = Join-Path $RepositoryRoot 'Config\PolicyPackages.psd1'
+$extensionPath = Join-Path $RepositoryRoot 'Config\PolicyExtensions.psd1'
 
 $errors = [System.Collections.Generic.List[string]]::new()
 $policies = @()
@@ -24,6 +25,23 @@ foreach ($file in Get-ChildItem -LiteralPath $policyRoot -Filter '*.json') {
 
     if (-not $policy.displayName -or -not $policy.conditions -or (-not $policy.grantControls -and -not $policy.sessionControls)) {
         $errors.Add("Policy is missing a required field: $($file.Name)")
+    }
+    $expectedFileName = '{0}.json' -f ($policy.displayName -replace '[\\/:*?"<>|]', '-')
+    if ($file.Name -cne $expectedFileName) {
+        $errors.Add("Policy filename does not match its display name: $($file.Name) should be $expectedFileName")
+    }
+    if ($policy.displayName -notmatch '^MSP-CA(?<PolicyNumber>\d{3})-') {
+        $errors.Add("Policy does not use the MSP-CA### numbering convention: $($policy.displayName)")
+    }
+    $expectedTopLevelOrder = @('@odata.type', 'displayName', 'state', 'conditions', 'grantControls', 'sessionControls')
+    $actualTopLevelOrder = @($policy.PSObject.Properties.Name)
+    if ((($actualTopLevelOrder | Select-Object -First $expectedTopLevelOrder.Count) -join '|') -cne ($expectedTopLevelOrder -join '|')) {
+        $errors.Add("Policy top-level JSON key ordering is inconsistent: $($file.Name)")
+    }
+    $expectedConditionOrder = @('clientAppTypes', 'platforms', 'locations', 'devices', 'authenticationFlows', 'applications', 'users')
+    $actualConditionOrder = @($policy.conditions.PSObject.Properties.Name)
+    if ((($actualConditionOrder | Select-Object -First $expectedConditionOrder.Count) -join '|') -cne ($expectedConditionOrder -join '|')) {
+        $errors.Add("Policy condition JSON key ordering is inconsistent: $($file.Name)")
     }
     if ($policy.'@odata.type' -notlike '*conditionalAccessPolicy*') {
         $errors.Add("CIPP cannot identify this as a Conditional Access template: $($file.Name)")
@@ -44,9 +62,16 @@ foreach ($file in Get-ChildItem -LiteralPath $policyRoot -Filter '*.json') {
 foreach ($duplicate in $policies | Group-Object displayName | Where-Object Count -gt 1) {
     $errors.Add("Duplicate policy display name: $($duplicate.Name)")
 }
+foreach ($duplicate in $policies | ForEach-Object {
+    if ($_.displayName -match '^MSP-CA(?<PolicyNumber>\d{3})-') {
+        $Matches.PolicyNumber
+    }
+} | Group-Object | Where-Object Count -gt 1) {
+    $errors.Add("Duplicate policy number: CA$($duplicate.Name)")
+}
 
-if ($policies.Count -ne 30) {
-    $errors.Add("Expected 30 Conditional Access policies but found $($policies.Count)")
+if ($policies.Count -ne 32) {
+    $errors.Add("Expected 32 Conditional Access policies but found $($policies.Count)")
 }
 
 $migration = Get-Content -LiteralPath $migrationPath -Raw | ConvertFrom-Json -Depth 20
@@ -94,14 +119,29 @@ foreach ($migrationId in $migrationIds) {
     }
 }
 
-if ($groupIds.Count -ne 16) {
-    $errors.Add("Expected 16 supporting groups but found $($groupIds.Count)")
+if ($groupIds.Count -ne 17) {
+    $errors.Add("Expected 17 supporting groups but found $($groupIds.Count)")
 }
 
 foreach ($policy in $policies) {
     foreach ($groupId in @($policy.conditions.users.includeGroups) + @($policy.conditions.users.excludeGroups)) {
         if ($groupId -and $groupId -notin $groupIds) {
             $errors.Add("Unmapped group ID $groupId in $($policy.displayName)")
+        }
+    }
+
+    $declaredLocationIds = @($policy.LocationInfo.id)
+    foreach ($locationId in @($policy.conditions.locations.includeLocations) + @($policy.conditions.locations.excludeLocations)) {
+        if ($locationId -and $locationId -notin @('All', 'AllTrusted') -and $locationId -notin $declaredLocationIds) {
+            $errors.Add("Unresolved named-location reference $locationId in $($policy.displayName)")
+        }
+    }
+    foreach ($location in @($policy.LocationInfo)) {
+        if ($null -eq $location) {
+            continue
+        }
+        if (-not $location.id -or -not $location.displayName) {
+            $errors.Add("LocationInfo requires a stable id and displayName in $($policy.displayName)")
         }
     }
 }
@@ -166,6 +206,70 @@ if ($authTransferPolicy.conditions.authenticationFlows.transferMethods -ne 'auth
     $errors.Add('Authentication-transfer blocking is missing, incorrectly scoped, or lacks its dedicated exception group.')
 }
 
+$internalSessionPolicy = $policies | Where-Object displayName -eq 'MSP-CA010-Global-InternalUser-Session-Hardening'
+if ($internalSessionPolicy.conditions.users.includeUsers -notcontains 'All' -or
+    $internalSessionPolicy.conditions.users.excludeGroups -notcontains ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-All-EmergencyAccess').id -or
+    $internalSessionPolicy.conditions.users.excludeGuestsOrExternalUsers -eq $null -or
+    $internalSessionPolicy.sessionControls.signInFrequency.value -ne 24 -or
+    $internalSessionPolicy.sessionControls.signInFrequency.type -ne 'hours' -or
+    $internalSessionPolicy.sessionControls.signInFrequency.frequencyInterval -ne 'timeBased' -or
+    -not $internalSessionPolicy.sessionControls.signInFrequency.isEnabled -or
+    $internalSessionPolicy.sessionControls.persistentBrowser.mode -ne 'never' -or
+    -not $internalSessionPolicy.sessionControls.persistentBrowser.isEnabled) {
+    $errors.Add('CA010 must apply 24-hour sign-in frequency and never-persistent browser sessions to internal users.')
+}
+
+$countryPolicy = $policies | Where-Object displayName -eq 'MSP-CA011-Global-Block-Outside-AllowedCountries'
+$countryExceptionId = ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-CountryRestriction').id
+$countryLocationId = '20000000-0000-4000-8000-000000000001'
+$countryLocationName = 'SHOOTHILL-CA-Allowed-Countries-Operator-Defined'
+if ($countryPolicy.conditions.users.includeUsers -notcontains 'All' -or
+    $countryPolicy.conditions.users.excludeGroups -notcontains $countryExceptionId -or
+    $countryPolicy.conditions.locations.includeLocations -notcontains 'All' -or
+    $countryPolicy.conditions.locations.excludeLocations -notcontains $countryLocationId -or
+    $countryPolicy.conditions.locations.excludeLocations -contains 'AllTrusted' -or
+    $countryPolicy.grantControls.builtInControls -notcontains 'block' -or
+    @($countryPolicy.LocationInfo).Count -ne 1 -or
+    $countryPolicy.LocationInfo[0].id -ne $countryLocationId -or
+    $countryPolicy.LocationInfo[0].displayName -ne $countryLocationName) {
+    $errors.Add('CA011 must block internal users outside its dedicated operator-defined allowed-country location.')
+}
+
+$extensionMamIds = @()
+if (-not (Test-Path -LiteralPath $extensionPath)) {
+    $errors.Add('Config\PolicyExtensions.psd1 is missing.')
+}
+else {
+    try {
+        $extensionConfig = Import-PowerShellDataFile -LiteralPath $extensionPath
+        if ($extensionConfig.SchemaVersion -ne '1.0') {
+            $errors.Add("Unsupported PolicyExtensions.psd1 SchemaVersion: $($extensionConfig.SchemaVersion)")
+        }
+        $extensionMamIds = @($extensionConfig.AdditionalMamApplicationIds)
+        foreach ($applicationId in $extensionMamIds) {
+            $parsedApplicationId = [guid]::Empty
+            if (-not [guid]::TryParse([string]$applicationId, [ref]$parsedApplicationId)) {
+                $errors.Add("AdditionalMamApplicationIds contains a non-GUID value: $applicationId")
+            }
+        }
+        foreach ($duplicate in $extensionMamIds | Group-Object | Where-Object Count -gt 1) {
+            $errors.Add("Duplicate AdditionalMamApplicationIds value: $($duplicate.Name)")
+        }
+    }
+    catch {
+        $errors.Add("Invalid policy extension configuration: $($_.Exception.Message)")
+    }
+}
+
+$mobileAppProtection = $policies | Where-Object displayName -eq 'MSP-CA300-Mobile-Require-AppProtection'
+$expectedMamApplications = @('Office365') + @($extensionMamIds)
+$actualMamApplications = @($mobileAppProtection.conditions.applications.includeApplications)
+if ($actualMamApplications.Count -ne $expectedMamApplications.Count -or
+    @($expectedMamApplications | Where-Object { $_ -notin $actualMamApplications }).Count -gt 0 -or
+    $mobileAppProtection.grantControls.builtInControls -notcontains 'compliantApplication') {
+    $errors.Add('CA300 application scope does not match Office 365 plus the declared third-party MAM extension IDs.')
+}
+
 $deviceComplianceGroupId = ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-DeviceCompliance').id
 $deviceComplianceOwners = @(
     'MSP-CA102-Admins-Require-CompliantDevice'
@@ -216,9 +320,12 @@ if (-not (Test-Path -LiteralPath $packagePath)) {
 }
 else {
     $packageManifest = Import-PowerShellDataFile -LiteralPath $packagePath
+    if ($packageManifest.SchemaVersion -ne '5.0') {
+        $errors.Add("Unsupported PolicyPackages.psd1 SchemaVersion: $($packageManifest.SchemaVersion)")
+    }
     $packages = @($packageManifest.Packages)
-    if ($packages.Count -ne 5) {
-        $errors.Add("Expected five activation packages but found $($packages.Count).")
+    if ($packages.Count -ne 6) {
+        $errors.Add("Expected six activation packages but found $($packages.Count).")
     }
     $expectedPackageNames = @(
         'SHOOTHILL-CA-01-Core-Identity-and-External-Access-P1'
@@ -226,6 +333,7 @@ else {
         'SHOOTHILL-CA-03-Identity-Protection-P2'
         'SHOOTHILL-CA-04-Workload-Identity-Premium'
         'SHOOTHILL-CA-05-Defender-and-Purview-Advanced'
+        'SHOOTHILL-CA-06-Optional-Country-Restriction'
     )
     foreach ($expectedName in $expectedPackageNames) {
         if ($expectedName -notin @($packages.Name)) {
@@ -237,6 +345,7 @@ else {
     foreach ($requiredCorePolicy in @(
         'MSP-CA006-Global-Block-AuthenticationTransfer'
         'MSP-CA009-Registration-Block-Outside-TrustedLocations'
+        'MSP-CA010-Global-InternalUser-Session-Hardening'
         'MSP-CA103-Admins-Block-Outside-TrustedLocations'
         'MSP-CA600-MFAExceptionAccounts-Block-Outside-TrustedLocations'
     )) {
@@ -245,9 +354,22 @@ else {
         }
     }
 
+    $standardPackages = @($packages | Where-Object PromotionTrack -eq 'Standard')
+    $optionalPackage = $packages | Where-Object Name -eq 'SHOOTHILL-CA-06-Optional-Country-Restriction'
+    if ($standardPackages.Count -ne 5 -or
+        $optionalPackage.PromotionTrack -ne 'ExplicitAdoption' -or
+        @($optionalPackage.Policies).Count -ne 1 -or
+        $optionalPackage.Policies -notcontains 'MSP-CA011-Global-Block-Outside-AllowedCountries' -or
+        @($standardPackages.Policies) -contains 'MSP-CA011-Global-Block-Outside-AllowedCountries') {
+        $errors.Add('CA011 must exist only in the explicit-adoption optional country-restriction package.')
+    }
+
     foreach ($package in $packages) {
-        if (-not $package.Name -or -not $package.Purpose -or -not $package.ReadinessGate -or @($package.Policies).Count -eq 0) {
-            $errors.Add('Each package needs a descriptive name, purpose, readiness gate, and at least one policy.')
+        if (-not $package.Name -or -not $package.PromotionTrack -or -not $package.Purpose -or -not $package.ReadinessGate -or @($package.Policies).Count -eq 0) {
+            $errors.Add('Each package needs a descriptive name, promotion track, purpose, readiness gate, and at least one policy.')
+        }
+        if ($package.PromotionTrack -notin @('Standard', 'ExplicitAdoption')) {
+            $errors.Add("Unsupported package promotion track '$($package.PromotionTrack)' in $($package.Name)")
         }
     }
 
@@ -272,4 +394,4 @@ if ($errors.Count -gt 0) {
     exit 1
 }
 
-Write-Output "PASS: 30 production policies (all Report-only), 16 groups, five complete capability packages, safe CIPP layout, and validated Microsoft dependencies."
+Write-Output "PASS: 32 production policies (all Report-only), 17 groups, five standard packages plus one explicit-adoption optional package, safe CIPP layout, and validated Microsoft dependencies."

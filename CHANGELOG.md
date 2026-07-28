@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.3.0 — 2026-07-28
+
+- Added CA010 to apply a 24-hour sign-in frequency and nonpersistent browser sessions to ordinary internal users; documented the value as a tenant-tunable starting point.
+- Added CA011 and `SHOOTHILL-CA-06-Optional-Country-Restriction` as an explicit-adoption path outside the standard five-package rollout.
+- Gave CA011 its own travel/exception group and the resolvable `SHOOTHILL-CA-Allowed-Countries-Operator-Defined` placeholder instead of reusing `AllTrusted`.
+- Added `Config/PolicyExtensions.psd1` so audited third-party Intune-MAM-enlightened application IDs can extend CA300 while its default Office 365 output remains unchanged.
+- Expanded the generated suite to 32 Report-only policies, 17 supporting groups, five standard packages, and one optional package.
+- Extended validation for internal session settings, tenant-owned location references, optional-package isolation, CA300 application extensions, complete package membership, and non-overlap.
+
 ## 3.2.0 — 2026-07-28
 
 - Merged the three trusted-location guardrails into the Core P1 activation package and reduced the suite from six packages to five without removing location protection.

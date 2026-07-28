@@ -8,9 +8,23 @@ $ErrorActionPreference = 'Stop'
 $configRoot = Join-Path $RepositoryRoot 'Config'
 $policyRoot = Join-Path $configRoot 'ConditionalAccess'
 $groupRoot = Join-Path $configRoot 'Groups'
+$extensionPath = Join-Path $configRoot 'PolicyExtensions.psd1'
 foreach ($path in @($configRoot, $policyRoot, $groupRoot)) {
     New-Item -ItemType Directory -Path $path -Force | Out-Null
 }
+
+if (-not (Test-Path -LiteralPath $extensionPath)) {
+    throw "Policy extension configuration is missing: $extensionPath"
+}
+$extensions = Import-PowerShellDataFile -LiteralPath $extensionPath
+$additionalMamApplicationIds = @($extensions.AdditionalMamApplicationIds)
+foreach ($applicationId in $additionalMamApplicationIds) {
+    $parsedApplicationId = [guid]::Empty
+    if (-not [guid]::TryParse([string]$applicationId, [ref]$parsedApplicationId)) {
+        throw "AdditionalMamApplicationIds contains a non-GUID value: $applicationId"
+    }
+}
+$mamApplicationIds = @('Office365') + @($additionalMamApplicationIds | Select-Object -Unique)
 
 function Write-JsonFile {
     param(
@@ -41,6 +55,7 @@ $ids = [ordered]@{
     ExcludeUnknownPlatforms = '10000000-0000-4000-8000-000000000015'
     ExcludeUnmanagedBrowser = '10000000-0000-4000-8000-000000000016'
     IncludeManagedMobile    = '10000000-0000-4000-8000-000000000017'
+    ExcludeCountryRestriction = '10000000-0000-4000-8000-000000000018'
 }
 
 $groupNames = [ordered]@{
@@ -60,6 +75,7 @@ $groupNames = [ordered]@{
     ExcludeUnknownPlatforms = 'MSP-CA-Exclude-UnknownPlatforms'
     ExcludeUnmanagedBrowser = 'MSP-CA-Exclude-UnmanagedBrowser'
     IncludeManagedMobile   = 'MSP-CA-Include-ManagedMobileDeviceCompliance'
+    ExcludeCountryRestriction = 'MSP-CA-Exclude-CountryRestriction'
 }
 
 $groupDescriptions = [ordered]@{
@@ -79,6 +95,7 @@ $groupDescriptions = [ordered]@{
     ExcludeUnknownPlatforms = 'Temporary exception from the unsupported-platform block. Keep empty by default.'
     ExcludeUnmanagedBrowser = 'Temporary exception from the unmanaged-browser download restriction (CA301) only. Keep empty by default.'
     IncludeManagedMobile   = 'Users whose organization-managed iOS and Android devices must satisfy Intune device compliance in addition to App Protection.'
+    ExcludeCountryRestriction = 'Time-bound travel or business exception from the optional country restriction. Keep empty by default.'
 }
 
 # Microsoft Entra Connect's built-in role is excluded from user-scoped policies.
@@ -295,6 +312,10 @@ $tokenProtectionResources = @(
     '00000003-0000-0ff1-ce00-000000000000',
     'cc15fd57-2c6c-4117-a88c-83b1d56b4bbe'
 )
+$countryRestrictionLocation = [ordered]@{
+    id          = '20000000-0000-4000-8000-000000000001'
+    displayName = 'SHOOTHILL-CA-Allowed-Countries-Operator-Defined'
+}
 
 $policies += New-Policy -DisplayName 'MSP-CA001-Global-Block-LegacyAuthentication' `
     -Conditions (New-Conditions -Users (New-UserScope AllHuman -ExcludeGroups @($allGroup)) `
@@ -339,6 +360,22 @@ $policies += New-Policy -DisplayName 'MSP-CA009-Registration-Block-Outside-Trust
         -Applications (New-ApplicationsScope -IncludeApplications @() -IncludeUserActions @('urn:user:registersecurityinfo')) `
         -Locations ([ordered]@{ includeLocations = @('All'); excludeLocations = @('AllTrusted') })) `
     -GrantControls (New-Grant -BuiltInControls @('block'))
+
+$policies += New-Policy -DisplayName 'MSP-CA010-Global-InternalUser-Session-Hardening' `
+    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup))) `
+    -SessionControls ([ordered]@{
+        signInFrequency = [ordered]@{
+            value = 24; type = 'hours'; authenticationType = 'primaryAndSecondaryAuthentication'; frequencyInterval = 'timeBased'; isEnabled = $true
+        }
+        persistentBrowser = [ordered]@{ mode = 'never'; isEnabled = $true }
+    })
+
+$countryRestrictionPolicy = New-Policy -DisplayName 'MSP-CA011-Global-Block-Outside-AllowedCountries' `
+    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeCountryRestriction)) `
+        -Locations ([ordered]@{ includeLocations = @('All'); excludeLocations = @($countryRestrictionLocation.id) })) `
+    -GrantControls (New-Grant -BuiltInControls @('block'))
+$countryRestrictionPolicy['LocationInfo'] = @($countryRestrictionLocation)
+$policies += $countryRestrictionPolicy
 
 $policies += New-Policy -DisplayName 'MSP-CA100-Admins-Require-PhishingResistantMFA' `
     -Conditions (New-Conditions -Users (New-UserScope Admins -ExcludeGroups @($allGroup))) `
@@ -386,7 +423,7 @@ $policies += New-Policy -DisplayName 'MSP-CA202-Guests-Block-AdminPortals' `
 
 $policies += New-Policy -DisplayName 'MSP-CA300-Mobile-Require-AppProtection' `
     -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeAppProtection)) `
-        -Applications (New-ApplicationsScope -IncludeApplications @('Office365')) `
+        -Applications (New-ApplicationsScope -IncludeApplications $mamApplicationIds) `
         -ClientAppTypes @('mobileAppsAndDesktopClients') `
         -Platforms ([ordered]@{ includePlatforms = @('android', 'iOS'); excludePlatforms = @() })) `
     -GrantControls (New-Grant -BuiltInControls @('compliantApplication'))

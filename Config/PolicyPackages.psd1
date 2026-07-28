@@ -1,10 +1,11 @@
 @{
-    SchemaVersion = '4.1'
+    SchemaVersion = '5.0'
     Packages = @(
         @{
             Name = 'SHOOTHILL-CA-01-Core-Identity-and-External-Access-P1'
-            Purpose = 'Universal identity, registration, authentication-flow, guest, and trusted-location controls for every managed Entra ID P1 tenant.'
-            ReadinessGate = 'Emergency access, MFA registration, TAP onboarding, legacy-auth/device-code/authentication-transfer inventory, representative B2B collaboration, and every admin/registration/service-account egress are complete.'
+            PromotionTrack = 'Standard'
+            Purpose = 'Universal identity, registration, authentication-flow, internal/guest session, and trusted-location controls for every managed Entra ID P1 tenant.'
+            ReadinessGate = 'Emergency access, MFA registration, TAP onboarding, legacy-auth/device-code/authentication-transfer inventory, 24-hour internal session impact, representative B2B collaboration, and every admin/registration/service-account egress are complete.'
             Policies = @(
                 'MSP-CA001-Global-Block-LegacyAuthentication'
                 'MSP-CA002-Global-Require-MFA'
@@ -16,12 +17,14 @@
                 'MSP-CA201-Guests-Session-Hardening'
                 'MSP-CA202-Guests-Block-AdminPortals'
                 'MSP-CA009-Registration-Block-Outside-TrustedLocations'
+                'MSP-CA010-Global-InternalUser-Session-Hardening'
                 'MSP-CA103-Admins-Block-Outside-TrustedLocations'
                 'MSP-CA600-MFAExceptionAccounts-Block-Outside-TrustedLocations'
             )
         }
         @{
             Name = 'SHOOTHILL-CA-02-Privileged-Endpoint-and-App-Protection'
+            PromotionTrack = 'Standard'
             Purpose = 'Administrator, supported-platform, Intune MAM/compliance, unmanaged-browser, and Windows token controls.'
             ReadinessGate = 'Admins have phishing-resistant methods and compliant workstations; every targeted Intune platform, MAM flow, managed-mobile assignment, and supported client is verified.'
             Policies = @(
@@ -41,6 +44,7 @@
         }
         @{
             Name = 'SHOOTHILL-CA-03-Identity-Protection-P2'
+            PromotionTrack = 'Standard'
             Purpose = 'Automated sign-in and user-risk remediation using Entra ID Protection.'
             ReadinessGate = 'Every in-scope user has Entra ID P2 or Entra Suite, SSPR writeback works where required, and the risk help-desk process is tested.'
             Policies = @(
@@ -50,6 +54,7 @@
         }
         @{
             Name = 'SHOOTHILL-CA-04-Workload-Identity-Premium'
+            PromotionTrack = 'Standard'
             Purpose = 'Risk and network controls for tenant-owned service principals.'
             ReadinessGate = 'Workload ID Premium is licensed and every service-principal execution location is inventoried.'
             Policies = @(
@@ -59,11 +64,21 @@
         }
         @{
             Name = 'SHOOTHILL-CA-05-Defender-and-Purview-Advanced'
+            PromotionTrack = 'Standard'
             Purpose = 'Defender for Cloud Apps session monitoring and Purview Adaptive Protection enforcement.'
             ReadinessGate = 'Defender App Control is integrated; Entra ID P2 and Purview Adaptive Protection are licensed; HR/legal governance and incident handling are approved and tested.'
             Policies = @(
                 'MSP-CA309-M365-Browser-Monitor-With-DefenderAppControl'
                 'MSP-CA402-InsiderRisk-Elevated-Block'
+            )
+        }
+        @{
+            Name = 'SHOOTHILL-CA-06-Optional-Country-Restriction'
+            PromotionTrack = 'ExplicitAdoption'
+            Purpose = 'Optional internal-user block outside a tenant-owned allowed-country named location.'
+            ReadinessGate = 'The tenant has explicitly adopted country restriction, created the exact required named location, validated every operating/travel country and unknown-location behavior, and approved a maintained exception process.'
+            Policies = @(
+                'MSP-CA011-Global-Block-Outside-AllowedCountries'
             )
         }
     )

@@ -1,14 +1,15 @@
 # Conditional Access policy matrix
 
-All 30 policies start Report-only. Package prerequisites determine applicability; there are no lab templates or disabled placeholders.
+All 32 policies start Report-only. Packages 01–05 are the standard rollout; package 06 is an explicit-adoption option, not a standard promotion step.
 
 | Package | Policies | Production coverage |
 |---:|---|---|
-| 01 Core Identity and External Access | CA001–CA006, CA009, CA103, CA200–CA202, CA600 | Authentication, registration, authentication-flow, guest, and trusted-location controls |
+| 01 Core Identity and External Access | CA001–CA006, CA009–CA010, CA103, CA200–CA202, CA600 | Authentication, registration, authentication-flow, internal/guest session, and trusted-location controls |
 | 02 Privileged, Endpoint and App Protection | CA007, CA100–CA102, CA300–CA307 | Administrator, platform, MAM, browser, compliance, and token controls |
 | 03 Identity Protection P2 | CA400–CA401 | Sign-in risk MFA and high user-risk remediation |
 | 04 Workload Identity Premium | CA500–CA501 | Service-principal risk and location controls |
 | 05 Defender and Purview | CA309, CA402 | Defender App Control monitoring and insider-risk enforcement |
+| 06 Optional Country Restriction | CA011 | Explicit-adoption internal-user block outside a tenant-owned allowed-country location |
 
 ## Exact policies
 
@@ -22,6 +23,8 @@ All 30 policies start Report-only. Package prerequisites determine applicability
 | CA006 | Block authentication transfer | Outlook/mobile transfer workflow inventory |
 | CA007 | Block unknown or unsupported platforms | Supported-platform decision |
 | CA009 | Block security-info registration outside trusted locations | Trusted registration paths |
+| CA010 | Harden ordinary internal-user sessions | Tenant-tuned 24-hour starting point |
+| CA011 | Block internal users outside allowed countries | Explicit adoption and operator-owned named location |
 | CA100 | Require phishing-resistant MFA for admins | Resistant methods for 14 recommended roles |
 | CA101 | Harden admin sessions | Separate admin identities |
 | CA102 | Require compliant admin devices | Managed privileged workstations |
@@ -29,7 +32,7 @@ All 30 policies start Report-only. Package prerequisites determine applicability
 | CA200 | Require guest MFA | Cross-tenant authentication testing |
 | CA201 | Harden guest sessions | Guest communications |
 | CA202 | Block ordinary guests from admin portals | Guest-admin allow group |
-| CA300 | Require mobile App Protection | iOS/Android Intune MAM |
+| CA300 | Require mobile App Protection | Office 365 plus audited extension IDs for third-party Intune MAM apps |
 | CA301 | Restrict unmanaged-browser downloads | Exchange/SharePoint restrictions |
 | CA302 | Require compliant Windows native clients | Windows compliance |
 | CA303 | Require compliant macOS native clients | macOS compliance |

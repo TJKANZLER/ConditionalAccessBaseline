@@ -80,6 +80,11 @@
       "DisplayName": "MSP-CA-Include-ManagedMobileDeviceCompliance",
       "Id": "10000000-0000-4000-8000-000000000017",
       "Type": "Group"
+    },
+    {
+      "DisplayName": "MSP-CA-Exclude-CountryRestriction",
+      "Id": "10000000-0000-4000-8000-000000000018",
+      "Type": "Group"
     }
   ],
   "Organization": "MSP CIPP Conditional Access Blueprint"

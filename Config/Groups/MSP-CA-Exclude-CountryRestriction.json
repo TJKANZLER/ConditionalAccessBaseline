@@ -1,0 +1,12 @@
+{
+  "id": "10000000-0000-4000-8000-000000000018",
+  "organizationId": "%OrganizationId%",
+  "description": "Time-bound travel or business exception from the optional country restriction. Keep empty by default.",
+  "displayName": "MSP-CA-Exclude-CountryRestriction",
+  "groupTypes": [],
+  "mail": null,
+  "mailEnabled": false,
+  "mailNickname": "mspca-excludecountryrestriction",
+  "securityEnabled": true,
+  "visibility": null
+}

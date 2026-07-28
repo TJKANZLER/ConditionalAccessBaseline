@@ -1,6 +1,6 @@
 # Conditional Access acceptance test plan
 
-Run this plan after import, after any policy change, and before promoting each package from Report-only. Use dedicated test identities and devices; never use an emergency-access account for normal administration.
+Run this plan after import, after any policy change, and before promoting each adopted package from Report-only. Packages 01–05 are the standard rollout. Package 06 is tested only after an explicit tenant decision to adopt country restriction. Use dedicated test identities and devices; never use an emergency-access account for normal administration.
 
 Record for every test:
 
@@ -20,6 +20,8 @@ For What If tests, select a concrete resource application rather than an aggrega
 |---|---|---|
 | Emergency access | Sign in with each monitored emergency account from a nontrusted network | No Shoothill user policy blocks the account; alerting records the use |
 | Internal MFA | Internal user signs in to Exchange Online in a modern client | CA002 reports MFA/authentication-strength requirement |
+| Internal session frequency | Internal user with authentication older than 24 hours accesses a concrete resource | CA010 reports reauthentication |
+| Internal browser persistence | Internal user closes and reopens a browser after selecting “Stay signed in” | CA010 reports `persistentBrowser: never`; tenant documents any tuning from the 24-hour starting point |
 | Legacy authentication | Test account attempts an approved legacy-protocol test | CA001 reports block |
 | Device code | Test account attempts device-code flow to a nonexcluded resource | CA005 reports block |
 | Device registration dependency | Exercise the documented device-registration flow | CA005 does not block Device Registration Service |
@@ -50,6 +52,7 @@ Core is accepted only when both trusted and deliberately untrusted location test
 | Admin session | Targeted administrator uses browser and native clients | CA101 reports the configured sign-in frequency and browser persistence controls |
 | Unknown platform | Use an explicitly unsupported platform or a controlled user-agent test | CA007 reports block |
 | Mobile App Protection | iOS and Android test users access Microsoft 365 with protected and unprotected apps | CA300 accepts only a supported app with the assigned App Protection policy |
+| Third-party MAM extension | Add a test app ID through `PolicyExtensions.psd1`, regenerate, and use protected/unprotected mobile clients | CA300 includes the app ID and accepts only the client with its assigned App Protection policy |
 | Unmanaged browser | Noncompliant device accesses Exchange Online and SharePoint Online | CA301 allows restricted web access and blocks downloads through service-side restrictions |
 | Desktop compliance | Windows, macOS, and Linux users test compliant and noncompliant devices | CA302, CA303, and CA306 report the correct per-platform result |
 | Managed mobile compliance | User in the managed-mobile include group tests compliant and noncompliant iOS/Android devices | CA304 or CA305 reports the correct result |
@@ -79,9 +82,24 @@ Core is accepted only when both trusted and deliberately untrusted location test
 | Defender App Control | Internal user opens a Microsoft 365 browser session | CA309 reports routing to Defender App Control and the session appears in Defender |
 | Elevated insider risk | Use the approved Purview Adaptive Protection test procedure | CA402 reports block and the HR/legal/security incident path receives the event |
 
+## Package 06 — Optional Country Restriction
+
+Do not run this section during the standard five-package rollout. First create the exact tenant-owned named location `SHOOTHILL-CA-Allowed-Countries-Operator-Defined` and populate its approved countries.
+
+| Scenario | Test path | Expected result |
+|---|---|---|
+| Package not adopted | Inspect the tenant's standard package assignments | Package 06 and CA011 are absent |
+| Allowed country | Internal test user signs in from each approved operating country | CA011 does not block |
+| Disallowed country | Internal test user signs in through a controlled egress outside the approved list | CA011 reports block |
+| Unknown location | Exercise the tenant's approved unknown-country test path | Result matches the documented `includeUnknownCountriesAndRegions` decision |
+| Travel exception | Add a test user temporarily to `MSP-CA-Exclude-CountryRestriction` and repeat the denied path | CA011 does not apply; membership is removed and the time-bound exception record is retained |
+| Emergency recovery | Test both emergency-access accounts from outside the approved list | CA011 does not apply and emergency-use monitoring records the sign-in |
+
+Package 06 is accepted only when the country list has an owner and review date, permitted and denied paths pass, unknown-location behavior is deliberate, and travel/recovery processes are operational.
+
 ## Promotion and rollback acceptance
 
-A package can be enforced only when:
+An adopted package can be enforced only when:
 
 1. every applicable row passes in Report-only;
 2. exclusions are empty or have an owner, approval, expiry, and remediation action;

@@ -16,10 +16,10 @@ The comparison is architectural, not a claim that every policy from every projec
 | Area | This repository | Stronger peer capability | Assessment |
 |---|---|---|---|
 | CIPP portability | Stable placeholder IDs, group templates, migration mapping, and exact package membership | Kenneth and Aollivierre also ship import mappings and broader supporting artifacts | Strong, with fewer tenant objects to maintain |
-| Deployment structure | Five non-overlapping packages with explicit licence/readiness gates | Alex provides multiple P1/P2 policy-set variants | Strong for a standardized MSP service; less flexible for bespoke architectures |
+| Deployment structure | Five non-overlapping standard packages plus one explicit-adoption country package, all with readiness gates | Alex provides multiple P1/P2 policy-set variants | Strong for a standardized MSP service while keeping geographic restriction a deliberate tenant choice |
 | Policy safety | Every policy is Report-only; emergency access, directory sync, GDAP, registration, and enrollment dependencies are checked | Microsoft provides broader governance guidance and What If/workbook tooling | Strong static safety; tenant-side evidence remains an operator responsibility |
 | Determinism | One generator produces every policy, group, and migration mapping; CI rejects drift | Peer repositories primarily contain exported artifacts or broad script collections | Strong |
-| Policy breadth | 30 production policies covering P1, Intune, P2, workload, Defender, and Purview paths | Kenneth has 49 CA policies; Alex has a 59-policy library; Aollivierre includes 44 CA policies plus supporting Intune/location artifacts | Intentionally smaller, but no longer missing generally available authentication-transfer protection |
+| Policy breadth | 32 production policies covering P1, Intune, P2, workload, Defender, Purview, internal sessions, and explicit-adoption country restriction | Kenneth has 49 CA policies; Alex has a 59-policy library; Aollivierre includes 44 CA policies plus supporting Intune/location artifacts | Intentionally smaller, with tenant-specific controls isolated from the standard rollout |
 | Supporting configuration | Groups are included; prerequisites and readiness gates are documented | Aollivierre includes authentication strengths, filters, named locations, Terms of Use, MAM, and compliance artifacts | Weaker breadth; some dependencies remain outside this repository |
 | Direct automation | Relies on CIPP Standards and CIPP drift management | Alex can deploy/update/remove policies and named locations directly; Aollivierre includes sign-in analysis tooling; Microsoft includes DSC, Terraform, and workbooks | Weaker by design, but CIPP-specific rather than tool-agnostic |
 | Reporting and testing | Static validator, acceptance test matrix, and promotion runbook | Microsoft workbooks and Aollivierre sign-in-log analysis provide richer live evidence | Structured and repeatable, but no automated tenant-side What If or report-only analytics |
@@ -50,13 +50,16 @@ The comparison is architectural, not a claim that every policy from every projec
 - Added CA006 to block authentication transfer with a dedicated exception group.
 - Added continuous validation in GitHub Actions.
 - Added a package-by-package acceptance test matrix with expected allowed and denied paths.
+- Added CA010 session hardening for ordinary internal users with a tenant-tunable 24-hour default.
+- Added CA011 in a separate explicit-adoption package using a tenant-owned allowed-country location rather than `AllTrusted`.
+- Added an audited CA300 extension point for third-party Intune-MAM-enlightened application IDs while preserving the default CA300 output.
 - Retained named locations, country lists, Terms of Use documents, and protected-action wiring as explicit tenant-owned configuration instead of shipping unsafe placeholders.
 
 ## Next improvements
 
 The highest-value remaining work is tenant-side assurance rather than adding more generic policies:
 
-1. automate a post-deployment inventory that proves all 30 policies exist in Report-only with resolved group IDs;
+1. automate a post-deployment inventory that proves all 32 policies exist in Report-only with resolved group and location IDs;
 2. export report-only outcomes and exception membership into a reviewable evidence bundle;
 3. add a repeatable What If scenario matrix for emergency access, admins, guests, managed devices, unmanaged browsers, service accounts, and service principals;
 4. generate a visual policy report for release artifacts;
