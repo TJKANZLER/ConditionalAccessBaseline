@@ -47,7 +47,7 @@
       "Type": "Group"
     },
     {
-      "DisplayName": "MSP-CA-Exclude-LocationPolicies",
+      "DisplayName": "MSP-CA-Exclude-AdminLocation",
       "Id": "10000000-0000-4000-8000-000000000010",
       "Type": "Group"
     },
@@ -84,6 +84,16 @@
     {
       "DisplayName": "MSP-CA-Exclude-CountryRestriction",
       "Id": "10000000-0000-4000-8000-000000000018",
+      "Type": "Group"
+    },
+    {
+      "DisplayName": "MSP-CA-Exclude-RegistrationLocation",
+      "Id": "10000000-0000-4000-8000-000000000019",
+      "Type": "Group"
+    },
+    {
+      "DisplayName": "MSP-CA-Include-PrivilegedUsers",
+      "Id": "10000000-0000-4000-8000-000000000020",
       "Type": "Group"
     }
   ],

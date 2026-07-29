@@ -17,14 +17,30 @@ if (-not (Test-Path -LiteralPath $extensionPath)) {
     throw "Policy extension configuration is missing: $extensionPath"
 }
 $extensions = Import-PowerShellDataFile -LiteralPath $extensionPath
-$additionalMamApplicationIds = @($extensions.AdditionalMamApplicationIds)
-foreach ($applicationId in $additionalMamApplicationIds) {
-    $parsedApplicationId = [guid]::Empty
-    if (-not [guid]::TryParse([string]$applicationId, [ref]$parsedApplicationId)) {
-        throw "AdditionalMamApplicationIds contains a non-GUID value: $applicationId"
-    }
+if ($extensions.SchemaVersion -ne '2.0') {
+    throw "Unsupported PolicyExtensions.psd1 SchemaVersion: $($extensions.SchemaVersion)"
 }
-$mamApplicationIds = @('Office365') + @($additionalMamApplicationIds | Select-Object -Unique)
+if (-not $extensions.ContainsKey('AdditionalMamProtectedResources')) {
+    throw 'PolicyExtensions.psd1 must declare AdditionalMamProtectedResources.'
+}
+if ($extensions.ContainsKey('AdditionalMamApplicationIds')) {
+    throw 'Retired AdditionalMamApplicationIds setting found; use AdditionalMamProtectedResources.'
+}
+$additionalMamProtectedResources = @($extensions.AdditionalMamProtectedResources)
+$additionalMamProtectedResourceIds = foreach ($resource in $additionalMamProtectedResources) {
+    if (-not $resource.ApplicationId -or -not $resource.DisplayName) {
+        throw 'Every AdditionalMamProtectedResources entry requires ApplicationId and DisplayName.'
+    }
+    $parsedApplicationId = [guid]::Empty
+    if (-not [guid]::TryParse([string]$resource.ApplicationId, [ref]$parsedApplicationId)) {
+        throw "AdditionalMamProtectedResources contains a non-GUID ApplicationId: $($resource.ApplicationId)"
+    }
+    [string]$resource.ApplicationId
+}
+if (@($additionalMamProtectedResourceIds | Select-Object -Unique).Count -ne @($additionalMamProtectedResourceIds).Count) {
+    throw 'AdditionalMamProtectedResources contains a duplicate ApplicationId.'
+}
+$mamProtectedResourceIds = @('Office365') + @($additionalMamProtectedResourceIds)
 
 function Write-JsonFile {
     param(
@@ -48,7 +64,7 @@ $ids = [ordered]@{
     ExcludeAppProtection    = '10000000-0000-4000-8000-000000000007'
     AllowGuestAdminPortals  = '10000000-0000-4000-8000-000000000008'
     ExcludeRisk             = '10000000-0000-4000-8000-000000000009'
-    ExcludeLocation         = '10000000-0000-4000-8000-000000000010'
+    ExcludeAdminLocation    = '10000000-0000-4000-8000-000000000010'
     ExcludeTokenProtection  = '10000000-0000-4000-8000-000000000011'
     ExcludeCloudAppSecurity = '10000000-0000-4000-8000-000000000013'
     ExcludeInsiderRisk      = '10000000-0000-4000-8000-000000000014'
@@ -56,6 +72,8 @@ $ids = [ordered]@{
     ExcludeUnmanagedBrowser = '10000000-0000-4000-8000-000000000016'
     IncludeManagedMobile    = '10000000-0000-4000-8000-000000000017'
     ExcludeCountryRestriction = '10000000-0000-4000-8000-000000000018'
+    ExcludeRegistrationLocation = '10000000-0000-4000-8000-000000000019'
+    IncludePrivilegedUsers  = '10000000-0000-4000-8000-000000000020'
 }
 
 $groupNames = [ordered]@{
@@ -68,7 +86,7 @@ $groupNames = [ordered]@{
     ExcludeAppProtection   = 'MSP-CA-Exclude-AppProtection'
     AllowGuestAdminPortals = 'MSP-CA-Allow-GuestAdminPortals'
     ExcludeRisk            = 'MSP-CA-Exclude-RiskPolicies'
-    ExcludeLocation        = 'MSP-CA-Exclude-LocationPolicies'
+    ExcludeAdminLocation   = 'MSP-CA-Exclude-AdminLocation'
     ExcludeTokenProtection = 'MSP-CA-Exclude-TokenProtection'
     ExcludeCloudAppSecurity = 'MSP-CA-Exclude-DefenderAppControl'
     ExcludeInsiderRisk     = 'MSP-CA-Exclude-InsiderRisk'
@@ -76,6 +94,8 @@ $groupNames = [ordered]@{
     ExcludeUnmanagedBrowser = 'MSP-CA-Exclude-UnmanagedBrowser'
     IncludeManagedMobile   = 'MSP-CA-Include-ManagedMobileDeviceCompliance'
     ExcludeCountryRestriction = 'MSP-CA-Exclude-CountryRestriction'
+    ExcludeRegistrationLocation = 'MSP-CA-Exclude-RegistrationLocation'
+    IncludePrivilegedUsers = 'MSP-CA-Include-PrivilegedUsers'
 }
 
 $groupDescriptions = [ordered]@{
@@ -88,7 +108,7 @@ $groupDescriptions = [ordered]@{
     ExcludeAppProtection   = 'Temporary Intune App Protection exception. Keep empty by default.'
     AllowGuestAdminPortals = 'Explicitly approved B2B guest administrators allowed to reach Microsoft admin portals.'
     ExcludeRisk            = 'Emergency exception from Entra ID Protection risk remediation. Keep empty by default.'
-    ExcludeLocation        = 'Temporary exception from trusted-location restrictions. Keep empty by default.'
+    ExcludeAdminLocation   = 'Temporary exception from CA103 administrator trusted-location restrictions only. Keep empty by default.'
     ExcludeTokenProtection = 'Temporary exception for token-protection compatibility issues. Keep empty by default.'
     ExcludeCloudAppSecurity = 'Temporary exception from Defender for Cloud Apps session controls. Keep empty by default.'
     ExcludeInsiderRisk     = 'Approved exception from Purview insider-risk enforcement. Keep empty by default.'
@@ -96,6 +116,8 @@ $groupDescriptions = [ordered]@{
     ExcludeUnmanagedBrowser = 'Temporary exception from the unmanaged-browser download restriction (CA301) only. Keep empty by default.'
     IncludeManagedMobile   = 'Users whose organization-managed iOS and Android devices must satisfy Intune device compliance in addition to App Protection.'
     ExcludeCountryRestriction = 'Time-bound travel or business exception from the optional country restriction. Keep empty by default.'
+    ExcludeRegistrationLocation = 'Temporary exception from CA009 security-information registration location restrictions only. Keep empty by default.'
+    IncludePrivilegedUsers = 'Custom-role, administrative-unit-scoped, and other privileged users not covered by the built-in administrator role list. Keep empty until explicitly populated.'
 }
 
 # Microsoft Entra Connect's built-in role is excluded from user-scoped policies.
@@ -191,6 +213,7 @@ function New-UserScope {
         }
         'Admins' {
             $users.includeRoles = @($adminRoleTemplateIds)
+            $users.includeGroups = @($ids.IncludePrivilegedUsers)
             $users.excludeGuestsOrExternalUsers = New-ServiceProviderUsersObject
         }
         'ManagedMobile' {
@@ -356,13 +379,13 @@ $policies += New-Policy -DisplayName 'MSP-CA007-Global-Block-UnknownOrUnsupporte
     -GrantControls (New-Grant -BuiltInControls @('block'))
 
 $policies += New-Policy -DisplayName 'MSP-CA009-Registration-Block-Outside-TrustedLocations' `
-    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeRegistration, $ids.ExcludeLocation)) `
+    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeRegistration, $ids.ExcludeRegistrationLocation)) `
         -Applications (New-ApplicationsScope -IncludeApplications @() -IncludeUserActions @('urn:user:registersecurityinfo')) `
         -Locations ([ordered]@{ includeLocations = @('All'); excludeLocations = @('AllTrusted') })) `
     -GrantControls (New-Grant -BuiltInControls @('block'))
 
 $policies += New-Policy -DisplayName 'MSP-CA010-Global-InternalUser-Session-Hardening' `
-    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup))) `
+    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeMfa))) `
     -SessionControls ([ordered]@{
         signInFrequency = [ordered]@{
             value = 24; type = 'hours'; authenticationType = 'primaryAndSecondaryAuthentication'; frequencyInterval = 'timeBased'; isEnabled = $true
@@ -371,7 +394,7 @@ $policies += New-Policy -DisplayName 'MSP-CA010-Global-InternalUser-Session-Hard
     })
 
 $countryRestrictionPolicy = New-Policy -DisplayName 'MSP-CA011-Global-Block-Outside-AllowedCountries' `
-    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeCountryRestriction)) `
+    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeMfa, $ids.ExcludeCountryRestriction)) `
         -Locations ([ordered]@{ includeLocations = @('All'); excludeLocations = @($countryRestrictionLocation.id) })) `
     -GrantControls (New-Grant -BuiltInControls @('block'))
 $countryRestrictionPolicy['LocationInfo'] = @($countryRestrictionLocation)
@@ -394,11 +417,11 @@ $policies += New-Policy -DisplayName 'MSP-CA101-Admins-Session-Hardening' `
 $policies += New-Policy -DisplayName 'MSP-CA102-Admins-Require-CompliantDevice' `
     -Conditions (New-Conditions -Users (New-UserScope Admins -ExcludeGroups @($allGroup, $ids.ExcludeCompliance)) `
         -Applications (New-ApplicationsScope -ExcludeApplications $intuneExclusions) `
-        -Platforms ([ordered]@{ includePlatforms = @('windows', 'macOS'); excludePlatforms = @() })) `
+        -Platforms ([ordered]@{ includePlatforms = @('windows', 'macOS', 'iOS', 'android', 'linux'); excludePlatforms = @() })) `
     -GrantControls (New-Grant -BuiltInControls @('compliantDevice'))
 
 $policies += New-Policy -DisplayName 'MSP-CA103-Admins-Block-Outside-TrustedLocations' `
-    -Conditions (New-Conditions -Users (New-UserScope Admins -ExcludeGroups @($allGroup, $ids.ExcludeLocation)) `
+    -Conditions (New-Conditions -Users (New-UserScope Admins -ExcludeGroups @($allGroup, $ids.ExcludeAdminLocation)) `
         -Locations ([ordered]@{ includeLocations = @('All'); excludeLocations = @('AllTrusted') })) `
     -GrantControls (New-Grant -BuiltInControls @('block'))
 
@@ -423,7 +446,7 @@ $policies += New-Policy -DisplayName 'MSP-CA202-Guests-Block-AdminPortals' `
 
 $policies += New-Policy -DisplayName 'MSP-CA300-Mobile-Require-AppProtection' `
     -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeAppProtection)) `
-        -Applications (New-ApplicationsScope -IncludeApplications $mamApplicationIds) `
+        -Applications (New-ApplicationsScope -IncludeApplications $mamProtectedResourceIds) `
         -ClientAppTypes @('mobileAppsAndDesktopClients') `
         -Platforms ([ordered]@{ includePlatforms = @('android', 'iOS'); excludePlatforms = @() })) `
     -GrantControls (New-Grant -BuiltInControls @('compliantApplication'))
@@ -514,7 +537,7 @@ $policies += New-Policy -DisplayName 'MSP-CA401-Risk-User-High-Require-Remediati
     -SessionControls ([ordered]@{ signInFrequency = $everyTime })
 
 $policies += New-Policy -DisplayName 'MSP-CA402-InsiderRisk-Elevated-Block' `
-    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeInsiderRisk)) `
+    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeMfa, $ids.ExcludeInsiderRisk)) `
         -InsiderRiskLevels 'elevated') `
     -GrantControls (New-Grant -BuiltInControls @('block'))
 
@@ -536,7 +559,7 @@ $policies += New-Policy -DisplayName 'MSP-CA501-Workloads-Block-Outside-TrustedL
     -GrantControls (New-Grant -BuiltInControls @('block'))
 
 $policies += New-Policy -DisplayName 'MSP-CA600-MFAExceptionAccounts-Block-Outside-TrustedLocations' `
-    -Conditions (New-Conditions -Users (New-UserScope MfaExceptionAccounts -ExcludeGroups @($allGroup, $ids.ExcludeLocation)) `
+    -Conditions (New-Conditions -Users (New-UserScope MfaExceptionAccounts -ExcludeGroups @($allGroup)) `
         -Locations ([ordered]@{ includeLocations = @('All'); excludeLocations = @('AllTrusted') })) `
     -GrantControls (New-Grant -BuiltInControls @('block'))
 

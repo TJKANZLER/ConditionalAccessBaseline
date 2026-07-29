@@ -1,0 +1,12 @@
+{
+  "id": "10000000-0000-4000-8000-000000000020",
+  "organizationId": "%OrganizationId%",
+  "description": "Custom-role, administrative-unit-scoped, and other privileged users not covered by the built-in administrator role list. Keep empty until explicitly populated.",
+  "displayName": "MSP-CA-Include-PrivilegedUsers",
+  "groupTypes": [],
+  "mail": null,
+  "mailEnabled": false,
+  "mailNickname": "mspca-includeprivilegedusers",
+  "securityEnabled": true,
+  "visibility": null
+}

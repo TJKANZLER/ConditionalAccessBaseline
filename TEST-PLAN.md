@@ -22,6 +22,7 @@ For What If tests, select a concrete resource application rather than an aggrega
 | Internal MFA | Internal user signs in to Exchange Online in a modern client | CA002 reports MFA/authentication-strength requirement |
 | Internal session frequency | Internal user with authentication older than 24 hours accesses a concrete resource | CA010 reports reauthentication |
 | Internal browser persistence | Internal user closes and reopens a browser after selecting “Stay signed in” | CA010 reports `persistentBrowser: never`; tenant documents any tuning from the 24-hour starting point |
+| Temporary user service account session | Account in `MSP-CA-Exclude-MFA-Temporary` repeats its approved automation path | CA010 does not apply; CA600 remains the location compensating control |
 | Legacy authentication | Test account attempts an approved legacy-protocol test | CA001 reports block |
 | Device code | Test account attempts device-code flow to a nonexcluded resource | CA005 reports block |
 | Device registration dependency | Exercise the documented device-registration flow | CA005 does not block Device Registration Service |
@@ -38,6 +39,7 @@ For What If tests, select a concrete resource application rather than an aggrega
 | Administrator, untrusted | A targeted test administrator signs in from a nontrusted network | CA103 reports block |
 | MFA-exempt service account, trusted | Test account in `MSP-CA-Exclude-MFA-Temporary` signs in from its approved egress | CA600 does not block |
 | MFA-exempt service account, untrusted | The same account signs in from a nontrusted source | CA600 reports block |
+| MFA-exempt service account bypass attempt | Inspect CA600 and exception memberships | CA600 has no ordinary exclusion group and the account cannot combine MFA and location exceptions |
 | CIPP/GDAP | Perform a delegated CIPP tenant operation | `serviceProvider` exclusion prevents human/guest policies from interrupting the operation |
 | Directory synchronization | Confirm normal Entra Connect synchronization and inspect applicable policies | Built-in Directory Synchronization Accounts role is excluded from all-user scopes |
 
@@ -48,11 +50,13 @@ Core is accepted only when both trusted and deliberately untrusted location test
 | Scenario | Test path | Expected result |
 |---|---|---|
 | Admin method | Targeted administrator uses phishing-resistant and non-phishing-resistant methods | CA100 accepts only the phishing-resistant method |
-| Admin workstation | Targeted administrator uses compliant and noncompliant Windows devices | CA102 accepts the compliant device and reports failure for the noncompliant device |
+| Built-in admin device | Targeted administrator uses compliant and noncompliant Windows and macOS devices | CA102 accepts only compliant devices |
+| Mobile/Linux admin device | Targeted administrator uses compliant and noncompliant iOS, Android, and Linux devices | CA102 accepts only compliant devices on every supported platform |
+| Declared privileged user | User without one of the 14 built-in role assignments is added to `MSP-CA-Include-PrivilegedUsers` | CA100–CA103 apply exactly as they do to a role-targeted administrator |
 | Admin session | Targeted administrator uses browser and native clients | CA101 reports the configured sign-in frequency and browser persistence controls |
 | Unknown platform | Use an explicitly unsupported platform or a controlled user-agent test | CA007 reports block |
 | Mobile App Protection | iOS and Android test users access Microsoft 365 with protected and unprotected apps | CA300 accepts only a supported app with the assigned App Protection policy |
-| Third-party MAM extension | Add a test app ID through `PolicyExtensions.psd1`, regenerate, and use protected/unprotected mobile clients | CA300 includes the app ID and accepts only the client with its assigned App Protection policy |
+| Additional MAM-protected resource | Add a test resource service-principal ID and display name through `PolicyExtensions.psd1`, regenerate, and use protected/unprotected mobile clients | CA300 includes the target resource ID and accepts only a client with its assigned App Protection policy |
 | Unmanaged browser | Noncompliant device accesses Exchange Online and SharePoint Online | CA301 allows restricted web access and blocks downloads through service-side restrictions |
 | Desktop compliance | Windows, macOS, and Linux users test compliant and noncompliant devices | CA302, CA303, and CA306 report the correct per-platform result |
 | Managed mobile compliance | User in the managed-mobile include group tests compliant and noncompliant iOS/Android devices | CA304 or CA305 reports the correct result |
@@ -81,6 +85,7 @@ Core is accepted only when both trusted and deliberately untrusted location test
 |---|---|---|
 | Defender App Control | Internal user opens a Microsoft 365 browser session | CA309 reports routing to Defender App Control and the session appears in Defender |
 | Elevated insider risk | Use the approved Purview Adaptive Protection test procedure | CA402 reports block and the HR/legal/security incident path receives the event |
+| Service-account insider-risk scope | Inspect a temporary user service account and CA402 What If result | CA402 does not apply to the account while CA600 continues to constrain its egress |
 
 ## Package 06 — Optional Country Restriction
 
@@ -92,6 +97,7 @@ Do not run this section during the standard five-package rollout. First create t
 | Allowed country | Internal test user signs in from each approved operating country | CA011 does not block |
 | Disallowed country | Internal test user signs in through a controlled egress outside the approved list | CA011 reports block |
 | Unknown location | Exercise the tenant's approved unknown-country test path | Result matches the documented `includeUnknownCountriesAndRegions` decision |
+| VPN/proxy egress | Sign in through every cloud VPN, secure web gateway, and proxy path | CA011 evaluates the egress IP's country and the result matches the documented network design |
 | Travel exception | Add a test user temporarily to `MSP-CA-Exclude-CountryRestriction` and repeat the denied path | CA011 does not apply; membership is removed and the time-bound exception record is retained |
 | Emergency recovery | Test both emergency-access accounts from outside the approved list | CA011 does not apply and emergency-use monitoring records the sign-in |
 

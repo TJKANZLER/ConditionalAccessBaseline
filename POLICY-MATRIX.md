@@ -23,16 +23,16 @@ All 32 policies start Report-only. Packages 01–05 are the standard rollout; pa
 | CA006 | Block authentication transfer | Outlook/mobile transfer workflow inventory |
 | CA007 | Block unknown or unsupported platforms | Supported-platform decision |
 | CA009 | Block security-info registration outside trusted locations | Trusted registration paths |
-| CA010 | Harden ordinary internal-user sessions | Tenant-tuned 24-hour starting point |
-| CA011 | Block internal users outside allowed countries | Explicit adoption and operator-owned named location |
-| CA100 | Require phishing-resistant MFA for admins | Resistant methods for 14 recommended roles |
+| CA010 | Harden ordinary internal-user sessions | Tenant-tuned 24-hour starting point; user service accounts excluded |
+| CA011 | Block internal users outside allowed countries | Explicit adoption, operator-owned named location, and user service accounts excluded |
+| CA100 | Require phishing-resistant MFA for admins | Resistant methods for 14 recommended roles plus declared privileged users |
 | CA101 | Harden admin sessions | Separate admin identities |
-| CA102 | Require compliant admin devices | Managed privileged workstations |
+| CA102 | Require compliant admin devices | Windows, macOS, iOS, Android, and Linux |
 | CA103 | Block admin access outside trusted locations | Admin VPN/ZTNA egress |
 | CA200 | Require guest MFA | Cross-tenant authentication testing |
 | CA201 | Harden guest sessions | Guest communications |
 | CA202 | Block ordinary guests from admin portals | Guest-admin allow group |
-| CA300 | Require mobile App Protection | Office 365 plus audited extension IDs for third-party Intune MAM apps |
+| CA300 | Require mobile App Protection | Office 365 plus audited protected resource/API IDs |
 | CA301 | Restrict unmanaged-browser downloads | Exchange/SharePoint restrictions |
 | CA302 | Require compliant Windows native clients | Windows compliance |
 | CA303 | Require compliant macOS native clients | macOS compliance |
@@ -43,7 +43,7 @@ All 32 policies start Report-only. Packages 01–05 are the standard rollout; pa
 | CA309 | Monitor M365 browsers through Defender App Control | Defender for Cloud Apps |
 | CA400 | Require MFA every time for medium/high sign-in risk | Entra ID P2 |
 | CA401 | Require remediation for high user risk | Entra ID P2, SSPR/password writeback |
-| CA402 | Block elevated insider risk | Purview Adaptive Protection |
+| CA402 | Block elevated insider risk | Purview Adaptive Protection; user service accounts excluded |
 | CA500 | Block high-risk workload identities | Workload ID Premium |
 | CA501 | Block workloads outside trusted locations | Workload ID Premium and known egress |
 | CA600 | Block MFA-exempt user accounts outside trusted locations | Complete service-account inventory |

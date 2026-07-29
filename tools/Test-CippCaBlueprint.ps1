@@ -119,8 +119,11 @@ foreach ($migrationId in $migrationIds) {
     }
 }
 
-if ($groupIds.Count -ne 17) {
-    $errors.Add("Expected 17 supporting groups but found $($groupIds.Count)")
+if ($groupIds.Count -ne 19) {
+    $errors.Add("Expected 19 supporting groups but found $($groupIds.Count)")
+}
+if (@($groups.displayName) -contains 'MSP-CA-Exclude-LocationPolicies') {
+    $errors.Add('Retired shared location exception group is still present.')
 }
 
 foreach ($policy in $policies) {
@@ -186,10 +189,23 @@ $expectedAdminRoles = @(
 foreach ($policyName in 'MSP-CA100-Admins-Require-PhishingResistantMFA', 'MSP-CA101-Admins-Session-Hardening', 'MSP-CA102-Admins-Require-CompliantDevice', 'MSP-CA103-Admins-Block-Outside-TrustedLocations') {
     $adminPolicy = $policies | Where-Object displayName -eq $policyName
     $actualRoles = @($adminPolicy.conditions.users.includeRoles)
+    $privilegedUsersGroupId = ($groups | Where-Object displayName -eq 'MSP-CA-Include-PrivilegedUsers').id
     if ($actualRoles.Count -ne $expectedAdminRoles.Count -or
         @($expectedAdminRoles | Where-Object { $_ -notin $actualRoles }).Count -gt 0) {
         $errors.Add("$policyName does not target the current Microsoft-recommended administrator role set.")
     }
+    if ($privilegedUsersGroupId -notin @($adminPolicy.conditions.users.includeGroups)) {
+        $errors.Add("$policyName does not include the explicit privileged-user extension group.")
+    }
+}
+
+$adminCompliancePolicy = $policies | Where-Object displayName -eq 'MSP-CA102-Admins-Require-CompliantDevice'
+$expectedAdminCompliancePlatforms = @('windows', 'macOS', 'iOS', 'android', 'linux')
+$actualAdminCompliancePlatforms = @($adminCompliancePolicy.conditions.platforms.includePlatforms)
+if ($actualAdminCompliancePlatforms.Count -ne $expectedAdminCompliancePlatforms.Count -or
+    @($expectedAdminCompliancePlatforms | Where-Object { $_ -notin $actualAdminCompliancePlatforms }).Count -gt 0 -or
+    $adminCompliancePolicy.grantControls.builtInControls -notcontains 'compliantDevice') {
+    $errors.Add('CA102 must require device compliance across every supported administrator platform.')
 }
 
 $deviceCodePolicy = $policies | Where-Object displayName -eq 'MSP-CA005-Global-Block-DeviceCodeFlow'
@@ -207,11 +223,16 @@ if ($authTransferPolicy.conditions.authenticationFlows.transferMethods -ne 'auth
 }
 
 $internalSessionPolicy = $policies | Where-Object displayName -eq 'MSP-CA010-Global-InternalUser-Session-Hardening'
+$emergencyGroupId = ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-All-EmergencyAccess').id
+$mfaExceptionGroupId = ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-MFA-Temporary').id
 if ($internalSessionPolicy.conditions.users.includeUsers -notcontains 'All' -or
-    $internalSessionPolicy.conditions.users.excludeGroups -notcontains ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-All-EmergencyAccess').id -or
+    @($internalSessionPolicy.conditions.users.excludeGroups).Count -ne 2 -or
+    $internalSessionPolicy.conditions.users.excludeGroups -notcontains $emergencyGroupId -or
+    $internalSessionPolicy.conditions.users.excludeGroups -notcontains $mfaExceptionGroupId -or
     $internalSessionPolicy.conditions.users.excludeGuestsOrExternalUsers -eq $null -or
     $internalSessionPolicy.sessionControls.signInFrequency.value -ne 24 -or
     $internalSessionPolicy.sessionControls.signInFrequency.type -ne 'hours' -or
+    $internalSessionPolicy.sessionControls.signInFrequency.authenticationType -ne 'primaryAndSecondaryAuthentication' -or
     $internalSessionPolicy.sessionControls.signInFrequency.frequencyInterval -ne 'timeBased' -or
     -not $internalSessionPolicy.sessionControls.signInFrequency.isEnabled -or
     $internalSessionPolicy.sessionControls.persistentBrowser.mode -ne 'never' -or
@@ -224,7 +245,11 @@ $countryExceptionId = ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-Co
 $countryLocationId = '20000000-0000-4000-8000-000000000001'
 $countryLocationName = 'SHOOTHILL-CA-Allowed-Countries-Operator-Defined'
 if ($countryPolicy.conditions.users.includeUsers -notcontains 'All' -or
+    @($countryPolicy.conditions.users.excludeGroups).Count -ne 3 -or
+    $countryPolicy.conditions.users.excludeGroups -notcontains $emergencyGroupId -or
+    $countryPolicy.conditions.users.excludeGroups -notcontains $mfaExceptionGroupId -or
     $countryPolicy.conditions.users.excludeGroups -notcontains $countryExceptionId -or
+    $countryPolicy.conditions.users.excludeGuestsOrExternalUsers -eq $null -or
     $countryPolicy.conditions.locations.includeLocations -notcontains 'All' -or
     $countryPolicy.conditions.locations.excludeLocations -notcontains $countryLocationId -or
     $countryPolicy.conditions.locations.excludeLocations -contains 'AllTrusted' -or
@@ -235,25 +260,36 @@ if ($countryPolicy.conditions.users.includeUsers -notcontains 'All' -or
     $errors.Add('CA011 must block internal users outside its dedicated operator-defined allowed-country location.')
 }
 
-$extensionMamIds = @()
+$extensionMamResourceIds = @()
 if (-not (Test-Path -LiteralPath $extensionPath)) {
     $errors.Add('Config\PolicyExtensions.psd1 is missing.')
 }
 else {
     try {
         $extensionConfig = Import-PowerShellDataFile -LiteralPath $extensionPath
-        if ($extensionConfig.SchemaVersion -ne '1.0') {
+        if ($extensionConfig.SchemaVersion -ne '2.0') {
             $errors.Add("Unsupported PolicyExtensions.psd1 SchemaVersion: $($extensionConfig.SchemaVersion)")
         }
-        $extensionMamIds = @($extensionConfig.AdditionalMamApplicationIds)
-        foreach ($applicationId in $extensionMamIds) {
-            $parsedApplicationId = [guid]::Empty
-            if (-not [guid]::TryParse([string]$applicationId, [ref]$parsedApplicationId)) {
-                $errors.Add("AdditionalMamApplicationIds contains a non-GUID value: $applicationId")
-            }
+        if (-not $extensionConfig.ContainsKey('AdditionalMamProtectedResources')) {
+            $errors.Add('PolicyExtensions.psd1 must declare AdditionalMamProtectedResources.')
         }
-        foreach ($duplicate in $extensionMamIds | Group-Object | Where-Object Count -gt 1) {
-            $errors.Add("Duplicate AdditionalMamApplicationIds value: $($duplicate.Name)")
+        if ($extensionConfig.ContainsKey('AdditionalMamApplicationIds')) {
+            $errors.Add('Retired AdditionalMamApplicationIds setting found; use AdditionalMamProtectedResources.')
+        }
+        $extensionMamResources = @($extensionConfig.AdditionalMamProtectedResources)
+        foreach ($resource in $extensionMamResources) {
+            if (-not $resource.ApplicationId -or -not $resource.DisplayName) {
+                $errors.Add('Every AdditionalMamProtectedResources entry requires ApplicationId and DisplayName.')
+                continue
+            }
+            $parsedApplicationId = [guid]::Empty
+            if (-not [guid]::TryParse([string]$resource.ApplicationId, [ref]$parsedApplicationId)) {
+                $errors.Add("AdditionalMamProtectedResources contains a non-GUID ApplicationId: $($resource.ApplicationId)")
+            }
+            $extensionMamResourceIds += [string]$resource.ApplicationId
+        }
+        foreach ($duplicate in $extensionMamResourceIds | Group-Object | Where-Object Count -gt 1) {
+            $errors.Add("Duplicate AdditionalMamProtectedResources ApplicationId: $($duplicate.Name)")
         }
     }
     catch {
@@ -262,12 +298,51 @@ else {
 }
 
 $mobileAppProtection = $policies | Where-Object displayName -eq 'MSP-CA300-Mobile-Require-AppProtection'
-$expectedMamApplications = @('Office365') + @($extensionMamIds)
+$expectedMamApplications = @('Office365') + @($extensionMamResourceIds)
 $actualMamApplications = @($mobileAppProtection.conditions.applications.includeApplications)
 if ($actualMamApplications.Count -ne $expectedMamApplications.Count -or
     @($expectedMamApplications | Where-Object { $_ -notin $actualMamApplications }).Count -gt 0 -or
     $mobileAppProtection.grantControls.builtInControls -notcontains 'compliantApplication') {
-    $errors.Add('CA300 application scope does not match Office 365 plus the declared third-party MAM extension IDs.')
+    $errors.Add('CA300 target-resource scope does not match Office 365 plus the declared protected resource IDs.')
+}
+
+$insiderRiskPolicy = $policies | Where-Object displayName -eq 'MSP-CA402-InsiderRisk-Elevated-Block'
+if (@($insiderRiskPolicy.conditions.users.excludeGroups).Count -ne 3 -or
+    $insiderRiskPolicy.conditions.users.excludeGroups -notcontains $emergencyGroupId -or
+    $insiderRiskPolicy.conditions.users.excludeGroups -notcontains $mfaExceptionGroupId -or
+    $insiderRiskPolicy.conditions.users.excludeGroups -notcontains ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-InsiderRisk').id) {
+    $errors.Add('CA402 must exclude temporary user-based service accounts from user-scoped insider-risk enforcement.')
+}
+
+$registrationLocationGroupId = ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-RegistrationLocation').id
+$adminLocationGroupId = ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-AdminLocation').id
+$registrationLocationPolicy = $policies | Where-Object displayName -eq 'MSP-CA009-Registration-Block-Outside-TrustedLocations'
+$adminLocationPolicy = $policies | Where-Object displayName -eq 'MSP-CA103-Admins-Block-Outside-TrustedLocations'
+$mfaExceptionLocationPolicy = $policies | Where-Object displayName -eq 'MSP-CA600-MFAExceptionAccounts-Block-Outside-TrustedLocations'
+if ($registrationLocationGroupId -notin @($registrationLocationPolicy.conditions.users.excludeGroups) -or
+    $registrationLocationGroupId -in @($adminLocationPolicy.conditions.users.excludeGroups) -or
+    $registrationLocationGroupId -in @($mfaExceptionLocationPolicy.conditions.users.excludeGroups)) {
+    $errors.Add('The CA009 registration-location exception must be dedicated to CA009.')
+}
+if ($adminLocationGroupId -notin @($adminLocationPolicy.conditions.users.excludeGroups) -or
+    $adminLocationGroupId -in @($registrationLocationPolicy.conditions.users.excludeGroups) -or
+    $adminLocationGroupId -in @($mfaExceptionLocationPolicy.conditions.users.excludeGroups)) {
+    $errors.Add('The CA103 administrator-location exception must be dedicated to CA103.')
+}
+foreach ($policy in $policies) {
+    if ($registrationLocationGroupId -in @($policy.conditions.users.excludeGroups) -and
+        $policy.displayName -ne 'MSP-CA009-Registration-Block-Outside-TrustedLocations') {
+        $errors.Add("$($policy.displayName) reuses the CA009 registration-location exception.")
+    }
+    if ($adminLocationGroupId -in @($policy.conditions.users.excludeGroups) -and
+        $policy.displayName -ne 'MSP-CA103-Admins-Block-Outside-TrustedLocations') {
+        $errors.Add("$($policy.displayName) reuses the CA103 administrator-location exception.")
+    }
+}
+if (@($mfaExceptionLocationPolicy.conditions.users.excludeGroups).Count -ne 1 -or
+    $mfaExceptionLocationPolicy.conditions.users.excludeGroups -notcontains $emergencyGroupId -or
+    $mfaExceptionLocationPolicy.conditions.users.includeGroups -notcontains $mfaExceptionGroupId) {
+    $errors.Add('CA600 must constrain MFA-exception accounts without a bypass group other than emergency access.')
 }
 
 $deviceComplianceGroupId = ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-DeviceCompliance').id
@@ -320,7 +395,7 @@ if (-not (Test-Path -LiteralPath $packagePath)) {
 }
 else {
     $packageManifest = Import-PowerShellDataFile -LiteralPath $packagePath
-    if ($packageManifest.SchemaVersion -ne '5.0') {
+    if ($packageManifest.SchemaVersion -ne '5.1') {
         $errors.Add("Unsupported PolicyPackages.psd1 SchemaVersion: $($packageManifest.SchemaVersion)")
     }
     $packages = @($packageManifest.Packages)
@@ -394,4 +469,4 @@ if ($errors.Count -gt 0) {
     exit 1
 }
 
-Write-Output "PASS: 32 production policies (all Report-only), 17 groups, five standard packages plus one explicit-adoption optional package, safe CIPP layout, and validated Microsoft dependencies."
+Write-Output "PASS: 32 production policies (all Report-only), 19 groups, five standard packages plus one explicit-adoption optional package, safe CIPP layout, and validated Microsoft dependencies."

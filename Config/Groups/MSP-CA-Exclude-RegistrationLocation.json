@@ -1,0 +1,12 @@
+{
+  "id": "10000000-0000-4000-8000-000000000019",
+  "organizationId": "%OrganizationId%",
+  "description": "Temporary exception from CA009 security-information registration location restrictions only. Keep empty by default.",
+  "displayName": "MSP-CA-Exclude-RegistrationLocation",
+  "groupTypes": [],
+  "mail": null,
+  "mailEnabled": false,
+  "mailNickname": "mspca-excluderegistrationlocation",
+  "securityEnabled": true,
+  "visibility": null
+}

@@ -11,13 +11,13 @@ The suite maps security objectives to explicit production paths by licence and o
 | Device-code phishing | Microsoft authentication-flow guidance | Block device-code flow but exclude Entra Device Registration Service |
 | Authentication transfer | Microsoft authentication-flow guidance | Block authentication transfer with a dedicated, empty-by-default exception group |
 | Internal user sessions | Microsoft Conditional Access session-control guidance | 24-hour sign-in frequency and nonpersistent browser sessions as a tenant-tunable starting point |
-| Administrator access | Microsoft phishing-resistant admin policy | Stable privileged roles, phishing-resistant MFA, session hardening, compliant devices |
+| Administrator access | Microsoft phishing-resistant admin policy | Stable recommended roles plus a declared privileged-user group, phishing-resistant MFA, session hardening, trusted egress, and compliant devices on all supported platforms |
 | Guest access | Microsoft guest CA guidance | MFA, session hardening, admin-portal block; exclude CIPP/GDAP service providers |
-| Mobile access | Microsoft Intune App Protection and compliance guidance | App Protection for Office 365 by default, an audited application-ID extension for third-party MAM apps, plus full compliance for the managed-mobile include group |
+| Mobile access | Microsoft Intune App Protection and compliance guidance | App Protection for Office 365 by default, an audited target-resource/API extension where separate resources need protection, plus full compliance for the managed-mobile include group |
 | Desktop access | Microsoft Intune compliance guidance | Separate Windows, macOS, and Linux compliance policies |
 | Unmanaged browser | Microsoft app-enforced restrictions | Restrict Exchange/SharePoint downloads on noncompliant devices |
 | Token replay | Microsoft Token Protection guidance | Windows GA only; Exchange, SharePoint, and Microsoft Teams Services native clients |
-| Network boundary | Microsoft location-based CA guidance | Trusted-location guardrails for admins, registration, and MFA-exempt service accounts; ordinary-user country restriction exists only in a separate explicit-adoption package with its own named-location placeholder |
+| Network boundary | Microsoft location-based CA guidance | Separate admin and registration location exceptions, non-bypassable trusted-location compensation for MFA-exempt accounts, and an explicit-adoption country restriction evaluated from public egress IP |
 | Identity risk | Microsoft Entra ID Protection | Separate sign-in and user-risk remediation policies in a P2 package |
 | Workload identities | Microsoft workload Conditional Access | Risk and location controls in a Workload ID Premium package |
 | Advanced sessions and risk | Microsoft Defender for Cloud Apps and Purview | Defender monitoring and insider-risk enforcement in an integration-gated package |
@@ -33,7 +33,7 @@ The suite maps security objectives to explicit production paths by licence and o
 | Hybrid-join alternative | Weaker parallel design that made deployment nondeterministic |
 | Sensitive-action authentication context | Inert until tenant-specific PIM/application wiring exists |
 
-Tenant-specific application IDs, country lists, IP ranges, Terms of Use documents, and permanent exceptions are not fabricated. Third-party MAM IDs enter through `Config/PolicyExtensions.psd1`; CA011 resolves the separately maintained `SHOOTHILL-CA-Allowed-Countries-Operator-Defined` tenant location by display name. The underlying values remain tenant configuration with explicit ownership.
+Tenant-specific resource IDs, country lists, IP ranges, Terms of Use documents, and permanent exceptions are not fabricated. Additional MAM-protected target resources enter through `Config/PolicyExtensions.psd1`; mobile client-app IDs do not. CA011 resolves the separately maintained `SHOOTHILL-CA-Allowed-Countries-Operator-Defined` tenant location by display name. The underlying values remain tenant configuration with explicit ownership.
 
 ## Primary references
 

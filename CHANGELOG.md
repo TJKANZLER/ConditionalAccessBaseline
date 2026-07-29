@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.4.0 — 2026-07-29
+
+- Extended CA102 compliant-device enforcement from Windows/macOS to Windows, macOS, iOS, Android, and Linux.
+- Added `MSP-CA-Include-PrivilegedUsers` so custom-role, administrative-unit-scoped, and other explicitly declared privileged identities receive CA100–CA103 alongside Microsoft's 14 recommended built-in roles.
+- Replaced the shared `MSP-CA-Exclude-LocationPolicies` group with dedicated CA009 registration and CA103 administrator location exceptions; CA600 now has no ordinary bypass, preserving its compensating control for MFA-exempt user accounts.
+- Excluded temporary user-based service accounts from CA010 session hardening, CA011 country restriction, and CA402 insider-risk enforcement while retaining CA600 trusted-egress enforcement.
+- Replaced the ambiguous CA300 client-app extension with `AdditionalMamProtectedResources`, requiring a display name and target resource/API service-principal application ID. The default CA300 output remains unchanged.
+- Expanded the suite to 19 supporting groups while retaining 32 Report-only policies, five standard packages, and one explicit-adoption package.
+- Added validation for dedicated location exceptions, non-bypassable CA600 scope, declared privileged users, every supported admin platform, service-account exclusions, CA300 resource metadata, and exact new schema versions.
+- Documented public-egress IP behavior for country restrictions, including cloud VPN, proxy, secure web gateway, and mobile-carrier paths.
+
 ## 3.3.0 — 2026-07-28
 
 - Added CA010 to apply a 24-hour sign-in frequency and nonpersistent browser sessions to ordinary internal users; documented the value as a tenant-tunable starting point.

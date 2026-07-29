@@ -29,7 +29,7 @@ The comparison is architectural, not a claim that every policy from every projec
 ## What this repository does better
 
 1. **It is a deployable service definition, not a policy dump.** Every shipped policy belongs to exactly one activation package, and every package has a readiness gate.
-2. **It reduces cross-tenant object debt.** Sixteen purpose-specific groups cover the suite instead of creating a separate include/exclude pair for nearly every policy.
+2. **It limits cross-tenant object debt without sharing unrelated bypasses.** Nineteen purpose-specific groups cover the suite; the registration and administrator location exceptions remain separate because collapsing them widened access unnecessarily.
 3. **It prevents known portability and lockout regressions in code.** The validator checks emergency-access mappings, Directory Synchronization Accounts, CIPP/GDAP scope, Device Registration Service, token-protection resources, authentication transfer, retired grants, and package completeness.
 4. **It has one declared production path.** Mutually exclusive device models, inert placeholders, and preview-only policies are not mixed into the selectable catalog.
 5. **It separates licence boundaries without calling security controls optional.** P2, Workload ID Premium, Defender, and Purview controls are production packages with explicit gates.
@@ -37,11 +37,11 @@ The comparison is architectural, not a claim that every policy from every projec
 ## Where it is weaker
 
 1. **Trusted named locations are dependencies, not generated artifacts.** IP ranges and countries are tenant data and must not be fabricated, but the suite still depends on operators creating and validating them in CIPP before Core enforcement.
-2. **Intune prerequisites are not bundled.** CA300 and CA302–CA306 require real App Protection and compliance policies. This repository validates the access layer, not the device-management layer beneath it.
+2. **Intune prerequisites are not bundled.** CA102, CA300, and CA302–CA306 require real App Protection and compliance policies across their supported platforms. This repository validates the access layer, not the device-management layer beneath it.
 3. **There is no live tenant test harness.** Report-only results, Conditional Access What If scenarios, exclusion tests, and rollback drills are manual evidence in the runbook.
 4. **There is no visual policy document.** Peers using Conditional Access Documenter are easier to review visually.
 5. **Protected-action wiring is not automated.** Requiring authentication context before editing Conditional Access is valuable, but the policy is ineffective until the tenant's authentication context and protected actions are configured.
-6. **There are no environment variants.** The baseline deliberately chooses a managed endpoint model; organizations needing hybrid-join alternatives, country blocks, Global Secure Access, or app-specific tiers must extend it deliberately.
+6. **There are no environment variants.** The baseline deliberately chooses a managed endpoint model; organizations needing hybrid-join alternatives, Global Secure Access, or app-specific application tiers must extend it deliberately.
 7. **Public reuse terms are not explicit.** The repository has no licence file, so a licence must be selected by the owner rather than inferred from peer projects.
 
 ## Actions taken from this review
@@ -52,7 +52,9 @@ The comparison is architectural, not a claim that every policy from every projec
 - Added a package-by-package acceptance test matrix with expected allowed and denied paths.
 - Added CA010 session hardening for ordinary internal users with a tenant-tunable 24-hour default.
 - Added CA011 in a separate explicit-adoption package using a tenant-owned allowed-country location rather than `AllTrusted`.
-- Added an audited CA300 extension point for third-party Intune-MAM-enlightened application IDs while preserving the default CA300 output.
+- Corrected the CA300 extension to accept audited target resource/API service-principal IDs, not misleading mobile client-app IDs, while preserving the default output.
+- Extended CA102 compliance to every supported administrator platform and added a declared privileged-user group for custom and administrative-unit-scoped roles.
+- Split the shared registration/admin location exception, removed CA600's ordinary bypass, and excluded temporary user service accounts from ordinary-user session, country, and insider-risk controls.
 - Retained named locations, country lists, Terms of Use documents, and protected-action wiring as explicit tenant-owned configuration instead of shipping unsafe placeholders.
 
 ## Next improvements

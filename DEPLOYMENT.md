@@ -1,6 +1,6 @@
 # CIPP deployment runbook
 
-The repository contains 32 Report-only Conditional Access templates, 17 group templates, stable migration mappings, five standard capability packages, and one explicit-adoption optional package.
+The repository contains 32 Report-only Conditional Access templates, 19 group templates, stable migration mappings, five standard capability packages, and one explicit-adoption optional package.
 
 ## 1. Preflight
 
@@ -10,19 +10,23 @@ The repository contains 32 Report-only Conditional Access templates, 17 group te
 - Verify CIPP/GDAP access and export the tenant's current Conditional Access policies.
 - Record whether Security Defaults is enabled. Do not disable it until the CA replacement is ready to deploy.
 - Validate Temporary Access Pass onboarding and administrator phishing-resistant methods.
+- Inventory custom roles, administrative-unit-scoped roles, and privileged users outside Microsoft's 14 recommended built-in roles; approve membership for `MSP-CA-Include-PrivilegedUsers`.
+- Inventory temporary user-based service accounts and every trusted egress while they are migrated to managed identities or service principals.
 - If Microsoft Entra Connect is present, confirm its account holds the built-in Directory Synchronization Accounts role.
 
 ## 2. Import
 
 1. Add `TJKANZLER/ConditionalAccessBaseline` in **Tools → Community Repositories**.
-2. Import the 17 files under `Config/Groups`.
+2. Import the 19 files under `Config/Groups`.
 3. Import the 32 files under `Config/ConditionalAccess`.
 4. Confirm CIPP resolves every template group ID through `Config/MigrationTable.json`.
 5. Confirm every imported policy state is Report-only.
 
 Do not import `MigrationTable.json`, `PolicyExtensions.psd1`, or `PolicyPackages.psd1` as templates.
 
-When CIPP asks how to handle groups and users, choose **Replace by display name** after confirming the 17 target group names are unique. Do not choose **Remove all exclusions**; that would remove emergency-access and policy-specific safeguards. **Leave as is** is suitable only when the referenced object IDs already belong to that same tenant, which is not the portable community-repository path.
+When CIPP asks how to handle groups and users, choose **Replace by display name** after confirming the 19 target group names are unique. Do not choose **Remove all exclusions**; that would remove emergency-access and policy-specific safeguards. **Leave as is** is suitable only when the referenced object IDs already belong to that same tenant, which is not the portable community-repository path.
+
+Older imports can contain `MSP-CA-Exclude-LocationPolicies`. It is retired because one membership bypassed unrelated controls. Move approved memberships, with fresh review, into either `MSP-CA-Exclude-RegistrationLocation` or `MSP-CA-Exclude-AdminLocation`; never carry the old group forward automatically.
 
 ## 3. Build the six CIPP packages
 
@@ -53,7 +57,7 @@ If CIPP reports `Empty Payload. JSON content expected`, stop. Confirm the select
 | Order | Package | Evidence required before enforcement |
 |---:|---|---|
 | 1 | Core Identity and External Access | MFA, registration, device code, authentication transfer, 24-hour internal sessions, B2B collaboration, and trusted egress pass |
-| 2 | Privileged, Endpoint and App Protection | Admin, Intune platform, MAM, browser, compliance, and token-client testing passes |
+| 2 | Privileged, Endpoint and App Protection | Built-in and declared privileged users, all supported admin platforms, MAM resources, browser, compliance, and token-client testing pass |
 | 3 | Identity Protection P2 | Licensing, SSPR, risk detections, and help-desk remediation pass |
 | 4 | Workload Identity Premium | Licensing and all service-principal execution locations are verified |
 | 5 | Defender and Purview Advanced | Defender integration and Purview/HR/legal response are operational |
@@ -75,28 +79,32 @@ The Core package protects administrators, security-info registration, and MFA-ex
 
 The policies use the portable `AllTrusted` selector. A stale or overly broad location marked trusted therefore weakens all three Core location controls. Remove the trusted flag from obsolete entries before enforcement.
 
+CA009 and CA103 have separate exception groups. CA600 has no ordinary location exception because it is the compensating control for accounts temporarily exempted from MFA. Do not place a normal account in multiple exception groups to manufacture a composite bypass.
+
 ## 7. Optional country-restriction adoption
 
 Do not assign or promote `SHOOTHILL-CA-06-Optional-Country-Restriction` as part of the standard rollout. Before explicit adoption:
 
 1. Create a country-based named location with the exact display name `SHOOTHILL-CA-Allowed-Countries-Operator-Defined`.
 2. Populate every country where the tenant permits ordinary-user sign-in.
-3. Make an explicit decision for unknown countries/regions; excluding unknown locations from the allowed set is the safer default.
-4. Record ownership, review cadence, travel handling, emergency recovery, and the approval path for `MSP-CA-Exclude-CountryRestriction`.
-5. Assign package 06 in Report-only and run its separate test section in `TEST-PLAN.md`.
-6. Promote only after permitted, denied, travelling-user, and exception cases all match the approved model.
+3. Inventory cloud VPN, secure web gateway, proxy, mobile carrier, and disaster-recovery egress. Entra evaluates the public egress IP's country, not physical user presence.
+4. Make an explicit decision for unknown countries/regions; excluding unknown locations from the allowed set is the safer default.
+5. Record ownership, review cadence, travel handling, emergency recovery, and the approval path for `MSP-CA-Exclude-CountryRestriction`.
+6. Assign package 06 in Report-only and run its separate test section in `TEST-PLAN.md`.
+7. Promote only after permitted, denied, travelling-user, proxy/VPN, and exception cases all match the approved model.
 
 CA011 carries only the location's stable placeholder ID and required display name. CIPP resolves it to the pre-existing tenant location. The repository does not create or overwrite the tenant's country list.
 
-## 8. Third-party mobile App Protection applications
+## 8. Additional MAM-protected resources
 
-CA300 includes Office 365 by default. For additional Intune-MAM-enlightened applications:
+CA300 includes Office 365 as its protected target resource by default. A third-party MAM-capable client accessing Office 365 is already covered. Add an extension only when protecting a separate resource or API:
 
 1. Fork or branch the community repository used for that tenant cohort.
-2. Add each application ID to `AdditionalMamApplicationIds` in `Config/PolicyExtensions.psd1`.
-3. Confirm the application genuinely supports Intune App Protection and that matching iOS/Android App Protection policies are assigned.
-4. Run the generator and validator, then inspect the CA300 JSON diff; only `includeApplications` should change.
-5. Import the updated CA300 template and repeat mobile acceptance tests in Report-only.
+2. Add an `ApplicationId` and descriptive `DisplayName` to `AdditionalMamProtectedResources` in `Config/PolicyExtensions.psd1`.
+3. Confirm the ID belongs to the target resource service principal in the tenant, not the mobile client app.
+4. Confirm the client genuinely supports Intune App Protection and matching iOS/Android App Protection policies are assigned.
+5. Run the generator and validator, then inspect the CA300 JSON diff; only `includeApplications` should change.
+6. Import the updated CA300 template and repeat mobile acceptance tests in Report-only.
 
 Do not add application IDs directly to generated JSON; regeneration would correctly remove that untracked edit.
 

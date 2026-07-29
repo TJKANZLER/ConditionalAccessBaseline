@@ -36,6 +36,8 @@ GitHub package membership is documented in `Config/PolicyPackages.psd1`, but CIP
 | Outlook QR/mobile transfer fails | CA006 | Expected when authentication transfer is blocked; verify whether the workflow has an approved requirement |
 | Ordinary users reauthenticate or cannot persist browser sessions | CA010 | Confirm the 24-hour starting value, report-only evidence, and any tenant-approved tuning |
 | Ordinary internal user receives a geographic block | CA011 | Confirm package 06 was explicitly adopted, the resolved allowed-country location, unknown-country behavior, travel status, and exception membership |
+| Custom/AU-scoped privileged user misses admin controls | CA100–CA103 | Confirm membership in `MSP-CA-Include-PrivilegedUsers` and rerun What If after a fresh token is issued |
+| Temporary user service account repeatedly reauthenticates | CA010 | Confirm it is in the governed MFA-temporary group while migration is active; do not use the emergency group |
 | MFA prompt appears because of risk | CA400 | Confirm P2 licensing and review the exact sign-in risk detection |
 | User is forced through password remediation | CA401 | Review high user-risk evidence, SSPR, and password-writeback health |
 | Service principal is blocked | CA500/CA501 | Review workload risk and the automation source IP |
@@ -52,7 +54,9 @@ GitHub package membership is documented in `Config/PolicyPackages.psd1`, but CIP
 
 Use a prevalidated emergency-access account, return the failing location policy to Report-only, and confirm recovery. Then verify every named location used by `AllTrusted` is marked trusted and contains the current public egress addresses. Test trusted and untrusted paths before re-enforcement.
 
-For CA011, do not troubleshoot against `AllTrusted`. Confirm CIPP resolved the placeholder to the exact `SHOOTHILL-CA-Allowed-Countries-Operator-Defined` location, then inspect its country list and `includeUnknownCountriesAndRegions` value. If the named location does not exist, create it before assigning package 06; the repository intentionally does not invent it.
+For CA011, do not troubleshoot against `AllTrusted`. Confirm CIPP resolved the placeholder to the exact `SHOOTHILL-CA-Allowed-Countries-Operator-Defined` location, then inspect its country list and `includeUnknownCountriesAndRegions` value. Compare the public IP in the sign-in log with cloud VPN, secure web gateway, proxy, and mobile-carrier egress; Entra does not prove the user's physical position. If the named location does not exist, create it before assigning package 06; the repository intentionally does not invent it.
+
+The retired `MSP-CA-Exclude-LocationPolicies` group must not be reused. CA009 uses `MSP-CA-Exclude-RegistrationLocation`; CA103 uses `MSP-CA-Exclude-AdminLocation`; CA600 has no ordinary location bypass.
 
 ## Device compliance deadlock
 

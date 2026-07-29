@@ -1,11 +1,11 @@
 @{
-    SchemaVersion = '5.0'
+    SchemaVersion = '5.1'
     Packages = @(
         @{
             Name = 'SHOOTHILL-CA-01-Core-Identity-and-External-Access-P1'
             PromotionTrack = 'Standard'
             Purpose = 'Universal identity, registration, authentication-flow, internal/guest session, and trusted-location controls for every managed Entra ID P1 tenant.'
-            ReadinessGate = 'Emergency access, MFA registration, TAP onboarding, legacy-auth/device-code/authentication-transfer inventory, 24-hour internal session impact, representative B2B collaboration, and every admin/registration/service-account egress are complete.'
+            ReadinessGate = 'Emergency access, MFA registration, TAP onboarding, legacy-auth/device-code/authentication-transfer inventory, 24-hour internal session impact, user service-account migration inventory, representative B2B collaboration, and every admin/registration/service-account egress are complete.'
             Policies = @(
                 'MSP-CA001-Global-Block-LegacyAuthentication'
                 'MSP-CA002-Global-Require-MFA'
@@ -25,8 +25,8 @@
         @{
             Name = 'SHOOTHILL-CA-02-Privileged-Endpoint-and-App-Protection'
             PromotionTrack = 'Standard'
-            Purpose = 'Administrator, supported-platform, Intune MAM/compliance, unmanaged-browser, and Windows token controls.'
-            ReadinessGate = 'Admins have phishing-resistant methods and compliant workstations; every targeted Intune platform, MAM flow, managed-mobile assignment, and supported client is verified.'
+            Purpose = 'Built-in and explicitly declared privileged-user, supported-platform, Intune MAM/compliance, unmanaged-browser, and Windows token controls.'
+            ReadinessGate = 'The privileged-user include group is reviewed; admins have phishing-resistant methods and compliant devices on every supported platform; every targeted Intune platform, protected resource, MAM flow, managed-mobile assignment, and supported client is verified.'
             Policies = @(
                 'MSP-CA100-Admins-Require-PhishingResistantMFA'
                 'MSP-CA101-Admins-Session-Hardening'
