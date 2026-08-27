@@ -4,8 +4,8 @@
         @{
             Name = 'SHOOTHILL-CA-01-Core-Identity-and-External-Access-P1'
             PromotionTrack = 'Standard'
-            Purpose = 'Universal identity, registration, authentication-flow, internal/guest session, and trusted-location controls for every managed Entra ID P1 tenant.'
-            ReadinessGate = 'Emergency access, MFA registration, TAP onboarding, legacy-auth/device-code/authentication-transfer inventory, trusted IP locations, 14-day trusted and 24-hour untrusted internal session impact, user service-account migration inventory, representative B2B collaboration, and every admin/registration/service-account egress are complete.'
+            Purpose = 'Universal identity, registration, authentication-flow, internal/guest session, trusted-location, and allowed-country controls for every managed Entra ID P1 tenant.'
+            ReadinessGate = 'Emergency access, MFA registration, TAP onboarding, legacy-auth/device-code/authentication-transfer inventory, trusted IP locations, allowed countries and travel handling, 14-day trusted and 24-hour untrusted internal session impact, user service-account migration inventory, representative B2B collaboration, and every admin/registration/service-account egress are complete.'
             Policies = @(
                 'MSP-CA001-Global-Block-LegacyAuthentication'
                 'MSP-CA002-Global-Require-MFA'
