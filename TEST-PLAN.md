@@ -20,9 +20,10 @@ For What If tests, select a concrete resource application rather than an aggrega
 |---|---|---|
 | Emergency access | Sign in with each monitored emergency account from a nontrusted network | No Shoothill user policy blocks the account; alerting records the use |
 | Internal MFA | Internal user signs in to Exchange Online in a modern client | CA002 reports MFA/authentication-strength requirement |
-| Internal session frequency | Internal user with authentication older than 24 hours accesses a concrete resource | CA010 reports reauthentication |
-| Internal browser persistence | Internal user closes and reopens a browser after selecting “Stay signed in” | CA010 reports `persistentBrowser: never`; tenant documents any tuning from the 24-hour starting point |
-| Temporary user service account session | Account in `MSP-CA-Exclude-MFA-Temporary` repeats its approved automation path | CA010 does not apply; CA600 remains the location compensating control |
+| Trusted internal session frequency | Internal user at a confirmed IP-based trusted location accesses a resource with authentication older than 14 days | CA010 reports reauthentication; CA012 does not apply |
+| Untrusted internal session frequency | Internal user outside trusted locations accesses a resource with authentication older than 24 hours | CA012 reports reauthentication; CA010 does not apply |
+| Internal browser persistence | Internal user closes and reopens a browser after selecting “Stay signed in” | The matching CA010 or CA012 policy reports `persistentBrowser: never` |
+| Temporary user service account session | Account in `MSP-CA-Exclude-MFA-Temporary` repeats its approved automation path | CA010 and CA012 do not apply; CA600 remains the location compensating control |
 | Legacy authentication | Test account attempts an approved legacy-protocol test | CA001 reports block |
 | Device code | Test account attempts device-code flow to a nonexcluded resource | CA005 reports block |
 | Device registration dependency | Exercise the documented device-registration flow | CA005 does not block Device Registration Service |
@@ -54,6 +55,8 @@ Core is accepted only when both trusted and deliberately untrusted location test
 | Mobile/Linux admin device | Targeted administrator uses compliant and noncompliant iOS, Android, and Linux devices | CA102 accepts only compliant devices on every supported platform |
 | Declared privileged user | User without one of the 14 built-in role assignments is added to `MSP-CA-Include-PrivilegedUsers` | CA100–CA103 apply exactly as they do to a role-targeted administrator |
 | Admin session | Targeted administrator uses browser and native clients | CA101 reports the configured sign-in frequency and browser persistence controls |
+| High-value authentication | User in `MSP-CA-Include-HighValueUsers` tests phishing-resistant and ordinary MFA methods | CA110 accepts only the phishing-resistant method across all resources |
+| High-value browser device | The same user accesses Exchange in browsers on compliant and noncompliant devices | CA111 accepts only the compliant device; capture device ID and compliance state in both results |
 | Unknown platform | Use an explicitly unsupported platform or a controlled user-agent test | CA007 reports block |
 | Mobile App Protection | iOS and Android test users access Microsoft 365 with protected and unprotected apps | CA300 accepts only a supported app with the assigned App Protection policy |
 | Additional MAM-protected resource | Add a test resource service-principal ID and display name through `PolicyExtensions.psd1`, regenerate, and use protected/unprotected mobile clients | CA300 includes the target resource ID and accepts only a client with its assigned App Protection policy |
@@ -62,13 +65,14 @@ Core is accepted only when both trusted and deliberately untrusted location test
 | Managed mobile compliance | User in the managed-mobile include group tests compliant and noncompliant iOS/Android devices | CA304 or CA305 reports the correct result |
 | Enrollment bootstrap | Enroll a new supported device | Intune and Intune Enrollment exclusions prevent a circular compliance dependency |
 | Token protection | Supported Windows native clients access Exchange, SharePoint, and Teams Services | CA307 reports bound-token success on supported clients and exposes unbound clients before enforcement |
+| Windows App token protection | Where Windows App is deployed, declare and test Azure Virtual Desktop, Windows 365, and Windows Cloud Login | CA307 includes the declared resources and reports bound-token success without blocking unsupported host registration types |
 
 ## Package 03 — Identity Protection P2
 
 | Scenario | Test path | Expected result |
 |---|---|---|
 | Medium/high sign-in risk | Use an approved Identity Protection simulation or existing detection | CA400 reports MFA every time |
-| High user risk | Use an approved high-risk test identity | CA401 reports risk remediation and the password reset/writeback path succeeds |
+| High user risk | Use an approved high-risk test identity | CA401 reports MFA-strength satisfaction followed by risk remediation, and the password reset/writeback path succeeds |
 | Risk exception | Temporarily add a test identity to the risk-exception group | Both risk policies stop applying; remove membership and record the exception test |
 
 ## Package 04 — Workload Identity Premium

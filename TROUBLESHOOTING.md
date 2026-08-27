@@ -32,12 +32,13 @@ GitHub package membership is documented in `Config/PolicyPackages.psd1`, but CIP
 | Native Microsoft 365 clients fail but browsers work | CA307 | Supported client version, registered device/PRT, and token-protection result |
 | Mobile Office app fails | CA300 | App Protection assignment, supported app, broker, and user licensing |
 | Browser can view but cannot download | CA301 | Expected behavior on noncompliant devices; verify app-enforced restrictions |
+| High-value user cannot use a browser | CA111 | Confirm group membership, supported browser device identification, Intune registration, and current compliance state |
 | CLI device login fails | CA005 | Replace device-code authentication or use a documented temporary exception |
 | Outlook QR/mobile transfer fails | CA006 | Expected when authentication transfer is blocked; verify whether the workflow has an approved requirement |
-| Ordinary users reauthenticate or cannot persist browser sessions | CA010 | Confirm the 24-hour starting value, report-only evidence, and any tenant-approved tuning |
+| Ordinary users reauthenticate or cannot persist browser sessions | CA010/CA012 | Confirm the request is classified against the expected trusted IP location, then review the 14-day trusted or 24-hour untrusted interval and report-only evidence |
 | Ordinary internal user receives a geographic block | CA011 | Confirm package 06 was explicitly adopted, the resolved allowed-country location, unknown-country behavior, travel status, and exception membership |
 | Custom/AU-scoped privileged user misses admin controls | CA100–CA103 | Confirm membership in `MSP-CA-Include-PrivilegedUsers` and rerun What If after a fresh token is issued |
-| Temporary user service account repeatedly reauthenticates | CA010 | Confirm it is in the governed MFA-temporary group while migration is active; do not use the emergency group |
+| Temporary user service account repeatedly reauthenticates | CA010/CA012 | Confirm it is in the governed MFA-temporary group while migration is active; do not use the emergency group |
 | MFA prompt appears because of risk | CA400 | Confirm P2 licensing and review the exact sign-in risk detection |
 | User is forced through password remediation | CA401 | Review high user-risk evidence, SSPR, and password-writeback health |
 | Service principal is blocked | CA500/CA501 | Review workload risk and the automation source IP |

@@ -10,27 +10,29 @@ CA005 excludes Device Registration Service. CA006 uses a separate empty-by-defau
 
 CA009 restricts security-info registration, CA103 restricts administrators, and CA600 constrains MFA-exempt user service accounts. CA009 and CA103 use separate, policy-specific location-exception groups. CA600 deliberately has no ordinary location bypass: add legitimate service-account egress to a trusted named location or migrate the account. Every admin, registration, VPN/ZTNA, service-account, and recovery egress must be marked trusted.
 
-CA010 sets ordinary internal users to a 24-hour sign-in frequency with persistent browser sessions disabled. Treat 24 hours as a documented starting point, not an immutable standard: tune it only after reviewing user experience, device posture, application behavior, and report-only evidence. Temporary user-based service accounts are excluded and remain governed by CA600 while they are migrated to workload identities.
+CA010 sets internal users to a 14-day sign-in frequency at IP-based trusted locations. CA012 applies a 24-hour frequency outside trusted locations. Both disable persistent browser sessions. The location scopes are mutually exclusive so the 24-hour policy cannot override the trusted-location interval. Treat both values as documented starting points and tune them only after reviewing user experience, network egress, application behavior, and report-only evidence. Temporary user-based service accounts are excluded and remain governed by CA600 while they are migrated to workload identities.
 
 Main risks: unregistered users, legacy scanners/apps, CLI device-code workflows, Outlook/mobile authentication transfer, incomplete trusted-location data, session interruption, guest-admin access, and user-based service accounts.
 
 ## 02 — Privileged, Endpoint and App Protection
 
-Targets Microsoft's current 14 recommended administrator roles plus `MSP-CA-Include-PrivilegedUsers`, the explicit extension for custom roles, administrative-unit-scoped roles, and other privileged users. CA100–CA103 give the combined scope phishing-resistant MFA, hardened sessions, trusted-location enforcement, and compliant-device enforcement on Windows, macOS, iOS, Android, and Linux. It also provides the complete Intune access layer:
+Targets Microsoft's current 14 recommended administrator roles plus `MSP-CA-Include-PrivilegedUsers`, the explicit extension for custom roles, administrative-unit-scoped roles, and other privileged users. CA100–CA103 give the combined scope phishing-resistant MFA, hardened sessions, trusted-location enforcement, and compliant-device enforcement on Windows, macOS, iOS, Android, and Linux. CA110–CA111 give the separately governed `MSP-CA-Include-HighValueUsers` group phishing-resistant MFA across all resources and compliant-device enforcement for browser access. This is intended for finance, payroll, executives, legal, and other identities whose data or authority makes a stolen session unusually damaging. It also provides the complete Intune access layer:
 
 - unsupported-platform blocking;
 - iOS/Android App Protection;
 - unmanaged Exchange/SharePoint browser restrictions;
 - Windows, macOS, Linux, and managed-mobile compliance;
-- Windows token protection for Exchange, SharePoint, and Teams Services.
+- Windows token protection for Exchange, SharePoint, and Teams Services, with declared Windows App resource extensions.
 
-Main risks: an incomplete privileged-user include group, admin lockout, unenrolled devices, unsupported apps or ChromeOS, stale clients, and missing platform compliance policies. Populate `MSP-CA-Include-PrivilegedUsers` from the tenant's privileged-role inventory and `MSP-CA-Include-ManagedMobileDeviceCompliance` only for users whose mobile devices are organization-managed.
+Main risks: incomplete privileged/high-value include groups, admin lockout, unenrolled devices, unsupported apps or ChromeOS, stale clients, and missing platform compliance policies. Populate `MSP-CA-Include-PrivilegedUsers` from the tenant's privileged-role inventory, populate `MSP-CA-Include-HighValueUsers` from a documented business-impact review, and populate `MSP-CA-Include-ManagedMobileDeviceCompliance` only for users whose mobile devices are organization-managed.
 
 CA300 remains Office 365-only in the default generated baseline. A MAM-capable third-party client accessing Office 365 is already evaluated by CA300; do not add its mobile client-app ID. To protect a separate resource or API, add an `ApplicationId` and `DisplayName` entry to `AdditionalMamProtectedResources` in `Config/PolicyExtensions.psd1`. Confirm the value identifies the target resource service principal, the client supports Intune App Protection, and a matching App Protection policy is assigned. Regenerate, validate, and review the CA300 diff before deployment. The empty default keeps CA300 unchanged and auditable.
 
+CA307 covers Exchange Online, SharePoint Online, and Teams by default. If the tenant deploys Windows App, declare Azure Virtual Desktop, Windows 365, and Windows Cloud Login under `AdditionalWindowsTokenProtectionResources` in `Config/PolicyExtensions.psd1`, regenerate, and test supported and unsupported registration types before enforcement. Only the three documented optional IDs are accepted by the generator.
+
 ## 03 — Identity Protection P2
 
-CA400 requires MFA every time for medium/high sign-in risk. CA401 requires high user-risk remediation. Confirm P2 licensing, SSPR, password writeback for hybrid users, and a tested risk-response process.
+CA400 requires MFA every time for medium/high sign-in risk. CA401 combines high user-risk remediation with MFA authentication strength using `AND`, as required by the current Microsoft Graph contract. Confirm P2 licensing, SSPR, password writeback for hybrid users, and a tested risk-response process.
 
 ## 04 — Workload Identity Premium
 

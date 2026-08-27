@@ -5,7 +5,7 @@
             Name = 'SHOOTHILL-CA-01-Core-Identity-and-External-Access-P1'
             PromotionTrack = 'Standard'
             Purpose = 'Universal identity, registration, authentication-flow, internal/guest session, and trusted-location controls for every managed Entra ID P1 tenant.'
-            ReadinessGate = 'Emergency access, MFA registration, TAP onboarding, legacy-auth/device-code/authentication-transfer inventory, 24-hour internal session impact, user service-account migration inventory, representative B2B collaboration, and every admin/registration/service-account egress are complete.'
+            ReadinessGate = 'Emergency access, MFA registration, TAP onboarding, legacy-auth/device-code/authentication-transfer inventory, trusted IP locations, 14-day trusted and 24-hour untrusted internal session impact, user service-account migration inventory, representative B2B collaboration, and every admin/registration/service-account egress are complete.'
             Policies = @(
                 'MSP-CA001-Global-Block-LegacyAuthentication'
                 'MSP-CA002-Global-Require-MFA'
@@ -17,7 +17,8 @@
                 'MSP-CA201-Guests-Session-Hardening'
                 'MSP-CA202-Guests-Block-AdminPortals'
                 'MSP-CA009-Registration-Block-Outside-TrustedLocations'
-                'MSP-CA010-Global-InternalUser-Session-Hardening'
+                'MSP-CA010-InternalUsers-TrustedLocation-Session-Hardening'
+                'MSP-CA012-InternalUsers-UntrustedLocation-Session-Hardening'
                 'MSP-CA103-Admins-Block-Outside-TrustedLocations'
                 'MSP-CA600-MFAExceptionAccounts-Block-Outside-TrustedLocations'
             )
@@ -25,12 +26,14 @@
         @{
             Name = 'SHOOTHILL-CA-02-Privileged-Endpoint-and-App-Protection'
             PromotionTrack = 'Standard'
-            Purpose = 'Built-in and explicitly declared privileged-user, supported-platform, Intune MAM/compliance, unmanaged-browser, and Windows token controls.'
-            ReadinessGate = 'The privileged-user include group is reviewed; admins have phishing-resistant methods and compliant devices on every supported platform; every targeted Intune platform, protected resource, MAM flow, managed-mobile assignment, and supported client is verified.'
+            Purpose = 'Built-in and explicitly declared privileged/high-value-user, supported-platform, Intune MAM/compliance, unmanaged-browser, and Windows token controls.'
+            ReadinessGate = 'The privileged-user and high-value-user include groups are reviewed; both populations have phishing-resistant methods; admins have compliant devices on every supported platform; high-value users have compliant browser devices; every targeted Intune platform, protected resource, MAM flow, managed-mobile assignment, and supported client is verified.'
             Policies = @(
                 'MSP-CA100-Admins-Require-PhishingResistantMFA'
                 'MSP-CA101-Admins-Session-Hardening'
                 'MSP-CA102-Admins-Require-CompliantDevice'
+                'MSP-CA110-HighValueUsers-Require-PhishingResistantMFA'
+                'MSP-CA111-HighValueUsers-Browser-Require-CompliantDevice'
                 'MSP-CA007-Global-Block-UnknownOrUnsupportedPlatforms'
                 'MSP-CA300-Mobile-Require-AppProtection'
                 'MSP-CA301-UnmanagedBrowser-Restrict-Downloads'

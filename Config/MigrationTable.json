@@ -95,6 +95,11 @@
       "DisplayName": "MSP-CA-Include-PrivilegedUsers",
       "Id": "10000000-0000-4000-8000-000000000020",
       "Type": "Group"
+    },
+    {
+      "DisplayName": "MSP-CA-Include-HighValueUsers",
+      "Id": "10000000-0000-4000-8000-000000000021",
+      "Type": "Group"
     }
   ],
   "Organization": "MSP CIPP Conditional Access Blueprint"

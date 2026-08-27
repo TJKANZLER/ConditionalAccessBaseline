@@ -1,13 +1,18 @@
 {
   "@odata.type": "#microsoft.graph.conditionalAccessPolicy",
-  "displayName": "MSP-CA010-Global-InternalUser-Session-Hardening",
+  "displayName": "MSP-CA010-InternalUsers-TrustedLocation-Session-Hardening",
   "state": "enabledForReportingButNotEnforced",
   "conditions": {
     "clientAppTypes": [
       "all"
     ],
     "platforms": null,
-    "locations": null,
+    "locations": {
+      "includeLocations": [
+        "AllTrusted"
+      ],
+      "excludeLocations": []
+    },
     "devices": null,
     "authenticationFlows": null,
     "applications": {
@@ -47,8 +52,8 @@
   "grantControls": null,
   "sessionControls": {
     "signInFrequency": {
-      "value": 24,
-      "type": "hours",
+      "value": 14,
+      "type": "days",
       "authenticationType": "primaryAndSecondaryAuthentication",
       "frequencyInterval": "timeBased",
       "isEnabled": true

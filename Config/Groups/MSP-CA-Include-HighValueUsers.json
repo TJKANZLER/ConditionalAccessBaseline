@@ -1,0 +1,12 @@
+{
+  "id": "10000000-0000-4000-8000-000000000021",
+  "organizationId": "%OrganizationId%",
+  "description": "Finance, payroll, executive, legal, and other high-impact users requiring phishing-resistant authentication and managed browser access. Keep empty until explicitly populated.",
+  "displayName": "MSP-CA-Include-HighValueUsers",
+  "groupTypes": [],
+  "mail": null,
+  "mailEnabled": false,
+  "mailNickname": "mspca-includehighvalueusers",
+  "securityEnabled": true,
+  "visibility": null
+}

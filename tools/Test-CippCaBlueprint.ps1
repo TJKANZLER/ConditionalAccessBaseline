@@ -70,8 +70,8 @@ foreach ($duplicate in $policies | ForEach-Object {
     $errors.Add("Duplicate policy number: CA$($duplicate.Name)")
 }
 
-if ($policies.Count -ne 32) {
-    $errors.Add("Expected 32 Conditional Access policies but found $($policies.Count)")
+if ($policies.Count -ne 35) {
+    $errors.Add("Expected 35 Conditional Access policies but found $($policies.Count)")
 }
 
 $migration = Get-Content -LiteralPath $migrationPath -Raw | ConvertFrom-Json -Depth 20
@@ -119,8 +119,8 @@ foreach ($migrationId in $migrationIds) {
     }
 }
 
-if ($groupIds.Count -ne 19) {
-    $errors.Add("Expected 19 supporting groups but found $($groupIds.Count)")
+if ($groupIds.Count -ne 20) {
+    $errors.Add("Expected 20 supporting groups but found $($groupIds.Count)")
 }
 if (@($groups.displayName) -contains 'MSP-CA-Exclude-LocationPolicies') {
     $errors.Add('Retired shared location exception group is still present.')
@@ -199,6 +199,30 @@ foreach ($policyName in 'MSP-CA100-Admins-Require-PhishingResistantMFA', 'MSP-CA
     }
 }
 
+$highValueUsersGroupId = ($groups | Where-Object displayName -eq 'MSP-CA-Include-HighValueUsers').id
+$highValueMfaPolicy = $policies | Where-Object displayName -eq 'MSP-CA110-HighValueUsers-Require-PhishingResistantMFA'
+$highValueBrowserPolicy = $policies | Where-Object displayName -eq 'MSP-CA111-HighValueUsers-Browser-Require-CompliantDevice'
+foreach ($highValuePolicy in @($highValueMfaPolicy, $highValueBrowserPolicy)) {
+    if ($null -eq $highValuePolicy -or
+        @($highValuePolicy.conditions.users.includeGroups).Count -ne 1 -or
+        $highValuePolicy.conditions.users.includeGroups -notcontains $highValueUsersGroupId -or
+        @($highValuePolicy.conditions.users.excludeGroups).Count -ne 1 -or
+        $highValuePolicy.conditions.users.excludeGroups -notcontains ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-All-EmergencyAccess').id) {
+        $errors.Add('CA110 and CA111 must target only the declared high-value-user group and exclude emergency access.')
+    }
+}
+if ($highValueMfaPolicy.conditions.applications.includeApplications -notcontains 'All' -or
+    $highValueMfaPolicy.conditions.clientAppTypes -notcontains 'all' -or
+    $highValueMfaPolicy.grantControls.operator -ne 'AND' -or
+    $highValueMfaPolicy.grantControls.authenticationStrength.id -ne '00000000-0000-0000-0000-000000000004') {
+    $errors.Add('CA110 must require phishing-resistant MFA for high-value users across all resources and clients.')
+}
+if ($highValueBrowserPolicy.conditions.applications.includeApplications -notcontains 'All' -or
+    $highValueBrowserPolicy.conditions.clientAppTypes -notcontains 'browser' -or
+    $highValueBrowserPolicy.grantControls.builtInControls -notcontains 'compliantDevice') {
+    $errors.Add('CA111 must require a compliant device for all high-value-user browser access.')
+}
+
 $adminCompliancePolicy = $policies | Where-Object displayName -eq 'MSP-CA102-Admins-Require-CompliantDevice'
 $expectedAdminCompliancePlatforms = @('windows', 'macOS', 'iOS', 'android', 'linux')
 $actualAdminCompliancePlatforms = @($adminCompliancePolicy.conditions.platforms.includePlatforms)
@@ -222,22 +246,36 @@ if ($authTransferPolicy.conditions.authenticationFlows.transferMethods -ne 'auth
     $errors.Add('Authentication-transfer blocking is missing, incorrectly scoped, or lacks its dedicated exception group.')
 }
 
-$internalSessionPolicy = $policies | Where-Object displayName -eq 'MSP-CA010-Global-InternalUser-Session-Hardening'
+$trustedSessionPolicy = $policies | Where-Object displayName -eq 'MSP-CA010-InternalUsers-TrustedLocation-Session-Hardening'
+$untrustedSessionPolicy = $policies | Where-Object displayName -eq 'MSP-CA012-InternalUsers-UntrustedLocation-Session-Hardening'
 $emergencyGroupId = ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-All-EmergencyAccess').id
 $mfaExceptionGroupId = ($groups | Where-Object displayName -eq 'MSP-CA-Exclude-MFA-Temporary').id
-if ($internalSessionPolicy.conditions.users.includeUsers -notcontains 'All' -or
-    @($internalSessionPolicy.conditions.users.excludeGroups).Count -ne 2 -or
-    $internalSessionPolicy.conditions.users.excludeGroups -notcontains $emergencyGroupId -or
-    $internalSessionPolicy.conditions.users.excludeGroups -notcontains $mfaExceptionGroupId -or
-    $internalSessionPolicy.conditions.users.excludeGuestsOrExternalUsers -eq $null -or
-    $internalSessionPolicy.sessionControls.signInFrequency.value -ne 24 -or
-    $internalSessionPolicy.sessionControls.signInFrequency.type -ne 'hours' -or
-    $internalSessionPolicy.sessionControls.signInFrequency.authenticationType -ne 'primaryAndSecondaryAuthentication' -or
-    $internalSessionPolicy.sessionControls.signInFrequency.frequencyInterval -ne 'timeBased' -or
-    -not $internalSessionPolicy.sessionControls.signInFrequency.isEnabled -or
-    $internalSessionPolicy.sessionControls.persistentBrowser.mode -ne 'never' -or
-    -not $internalSessionPolicy.sessionControls.persistentBrowser.isEnabled) {
-    $errors.Add('CA010 must apply 24-hour sign-in frequency and never-persistent browser sessions to internal users.')
+foreach ($sessionPolicy in @($trustedSessionPolicy, $untrustedSessionPolicy)) {
+    if ($null -eq $sessionPolicy -or
+        $sessionPolicy.conditions.users.includeUsers -notcontains 'All' -or
+        @($sessionPolicy.conditions.users.excludeGroups).Count -ne 2 -or
+        $sessionPolicy.conditions.users.excludeGroups -notcontains $emergencyGroupId -or
+        $sessionPolicy.conditions.users.excludeGroups -notcontains $mfaExceptionGroupId -or
+        $sessionPolicy.conditions.users.excludeGuestsOrExternalUsers -eq $null -or
+        $sessionPolicy.sessionControls.signInFrequency.authenticationType -ne 'primaryAndSecondaryAuthentication' -or
+        $sessionPolicy.sessionControls.signInFrequency.frequencyInterval -ne 'timeBased' -or
+        -not $sessionPolicy.sessionControls.signInFrequency.isEnabled -or
+        $sessionPolicy.sessionControls.persistentBrowser.mode -ne 'never' -or
+        -not $sessionPolicy.sessionControls.persistentBrowser.isEnabled) {
+        $errors.Add('CA010 and CA012 must apply the expected session controls and exclusions to internal users.')
+    }
+}
+if ($trustedSessionPolicy.conditions.locations.includeLocations -notcontains 'AllTrusted' -or
+    @($trustedSessionPolicy.conditions.locations.excludeLocations).Count -ne 0 -or
+    $trustedSessionPolicy.sessionControls.signInFrequency.value -ne 14 -or
+    $trustedSessionPolicy.sessionControls.signInFrequency.type -ne 'days') {
+    $errors.Add('CA010 must apply a 14-day sign-in frequency at trusted locations.')
+}
+if ($untrustedSessionPolicy.conditions.locations.includeLocations -notcontains 'All' -or
+    $untrustedSessionPolicy.conditions.locations.excludeLocations -notcontains 'AllTrusted' -or
+    $untrustedSessionPolicy.sessionControls.signInFrequency.value -ne 24 -or
+    $untrustedSessionPolicy.sessionControls.signInFrequency.type -ne 'hours') {
+    $errors.Add('CA012 must apply a 24-hour sign-in frequency outside trusted locations.')
 }
 
 $countryPolicy = $policies | Where-Object displayName -eq 'MSP-CA011-Global-Block-Outside-AllowedCountries'
@@ -261,17 +299,21 @@ if ($countryPolicy.conditions.users.includeUsers -notcontains 'All' -or
 }
 
 $extensionMamResourceIds = @()
+$extensionTokenResourceIds = @()
 if (-not (Test-Path -LiteralPath $extensionPath)) {
     $errors.Add('Config\PolicyExtensions.psd1 is missing.')
 }
 else {
     try {
         $extensionConfig = Import-PowerShellDataFile -LiteralPath $extensionPath
-        if ($extensionConfig.SchemaVersion -ne '2.0') {
+        if ($extensionConfig.SchemaVersion -ne '3.0') {
             $errors.Add("Unsupported PolicyExtensions.psd1 SchemaVersion: $($extensionConfig.SchemaVersion)")
         }
         if (-not $extensionConfig.ContainsKey('AdditionalMamProtectedResources')) {
             $errors.Add('PolicyExtensions.psd1 must declare AdditionalMamProtectedResources.')
+        }
+        if (-not $extensionConfig.ContainsKey('AdditionalWindowsTokenProtectionResources')) {
+            $errors.Add('PolicyExtensions.psd1 must declare AdditionalWindowsTokenProtectionResources.')
         }
         if ($extensionConfig.ContainsKey('AdditionalMamApplicationIds')) {
             $errors.Add('Retired AdditionalMamApplicationIds setting found; use AdditionalMamProtectedResources.')
@@ -290,6 +332,24 @@ else {
         }
         foreach ($duplicate in $extensionMamResourceIds | Group-Object | Where-Object Count -gt 1) {
             $errors.Add("Duplicate AdditionalMamProtectedResources ApplicationId: $($duplicate.Name)")
+        }
+        $supportedOptionalTokenResources = @{
+            '9cdead84-a844-4324-93f2-b2e6bb768d07' = 'Azure Virtual Desktop'
+            '0af06dc6-e4b5-4f28-818e-e78e62d137a5' = 'Windows 365'
+            '270efc09-cd0d-444b-a71f-39af4910ec45' = 'Windows Cloud Login'
+        }
+        foreach ($resource in @($extensionConfig.AdditionalWindowsTokenProtectionResources)) {
+            $applicationId = [string]$resource.ApplicationId
+            if (-not $resource.ApplicationId -or -not $resource.DisplayName -or
+                -not $supportedOptionalTokenResources.ContainsKey($applicationId) -or
+                [string]$resource.DisplayName -ne $supportedOptionalTokenResources[$applicationId]) {
+                $errors.Add("Invalid optional Windows token-protection resource: $applicationId")
+                continue
+            }
+            $extensionTokenResourceIds += $applicationId
+        }
+        foreach ($duplicate in $extensionTokenResourceIds | Group-Object | Where-Object Count -gt 1) {
+            $errors.Add("Duplicate AdditionalWindowsTokenProtectionResources ApplicationId: $($duplicate.Name)")
         }
     }
     catch {
@@ -361,17 +421,20 @@ foreach ($policy in $policies) {
 }
 
 $tokenPolicy = $policies | Where-Object displayName -eq 'MSP-CA307-Windows-Require-TokenProtection'
-$supportedTokenResources = @(
+$requiredTokenResources = @(
     '00000002-0000-0ff1-ce00-000000000000'
     '00000003-0000-0ff1-ce00-000000000000'
     'cc15fd57-2c6c-4117-a88c-83b1d56b4bbe'
 )
-foreach ($resource in $supportedTokenResources) {
+$expectedTokenResources = @($requiredTokenResources) + @($extensionTokenResourceIds)
+foreach ($resource in $expectedTokenResources) {
     if ($resource -notin @($tokenPolicy.conditions.applications.includeApplications)) {
         $errors.Add("Windows token protection is missing supported resource $resource.")
     }
 }
-if ($tokenPolicy.conditions.applications.includeApplications -contains 'Office365' -or
+if (@($tokenPolicy.conditions.applications.includeApplications).Count -ne $expectedTokenResources.Count -or
+    @($tokenPolicy.conditions.applications.includeApplications | Where-Object { $_ -notin $expectedTokenResources }).Count -gt 0 -or
+    $tokenPolicy.conditions.applications.includeApplications -contains 'Office365' -or
     $tokenPolicy.conditions.clientAppTypes -contains 'browser' -or
     -not $tokenPolicy.sessionControls.secureSignInSession.isEnabled) {
     $errors.Add('Windows token-protection scope is unsafe or incomplete.')
@@ -379,7 +442,17 @@ if ($tokenPolicy.conditions.applications.includeApplications -contains 'Office36
 
 $riskRemediation = $policies | Where-Object displayName -eq 'MSP-CA401-Risk-User-High-Require-Remediation'
 if ($riskRemediation.conditions.userRiskLevels -notcontains 'high' -or
+    @($riskRemediation.grantControls.builtInControls).Count -ne 1 -or
     $riskRemediation.grantControls.builtInControls -notcontains 'riskRemediation' -or
+    $riskRemediation.grantControls.operator -ne 'AND' -or
+    $riskRemediation.grantControls.authenticationStrength.id -ne '00000000-0000-0000-0000-000000000002' -or
+    $riskRemediation.conditions.applications.includeApplications -notcontains 'All' -or
+    @($riskRemediation.conditions.applications.excludeApplications).Count -ne 0 -or
+    $null -ne $riskRemediation.conditions.platforms -or
+    $null -ne $riskRemediation.conditions.locations -or
+    $null -ne $riskRemediation.conditions.devices -or
+    $null -ne $riskRemediation.conditions.authenticationFlows -or
+    $riskRemediation.sessionControls.signInFrequency.frequencyInterval -ne 'everyTime' -or
     $riskRemediation.conditions.PSObject.Properties.Name -contains 'signInRiskLevels') {
     $errors.Add('High user-risk policy must use a separate high-risk remediation control.')
 }
@@ -420,12 +493,23 @@ else {
     foreach ($requiredCorePolicy in @(
         'MSP-CA006-Global-Block-AuthenticationTransfer'
         'MSP-CA009-Registration-Block-Outside-TrustedLocations'
-        'MSP-CA010-Global-InternalUser-Session-Hardening'
+        'MSP-CA010-InternalUsers-TrustedLocation-Session-Hardening'
+        'MSP-CA012-InternalUsers-UntrustedLocation-Session-Hardening'
         'MSP-CA103-Admins-Block-Outside-TrustedLocations'
         'MSP-CA600-MFAExceptionAccounts-Block-Outside-TrustedLocations'
     )) {
         if ($requiredCorePolicy -notin @($corePackage.Policies)) {
             $errors.Add("Core package is missing foundational policy: $requiredCorePolicy")
+        }
+    }
+
+    $protectionPackage = $packages | Where-Object Name -eq 'SHOOTHILL-CA-02-Privileged-Endpoint-and-App-Protection'
+    foreach ($requiredProtectionPolicy in @(
+        'MSP-CA110-HighValueUsers-Require-PhishingResistantMFA'
+        'MSP-CA111-HighValueUsers-Browser-Require-CompliantDevice'
+    )) {
+        if ($requiredProtectionPolicy -notin @($protectionPackage.Policies)) {
+            $errors.Add("Protection package is missing high-value-user policy: $requiredProtectionPolicy")
         }
     }
 
@@ -469,4 +553,4 @@ if ($errors.Count -gt 0) {
     exit 1
 }
 
-Write-Output "PASS: 32 production policies (all Report-only), 19 groups, five standard packages plus one explicit-adoption optional package, safe CIPP layout, and validated Microsoft dependencies."
+Write-Output "PASS: 35 production policies (all Report-only), 20 groups, five standard packages plus one explicit-adoption optional package, safe CIPP layout, and validated Microsoft dependencies."

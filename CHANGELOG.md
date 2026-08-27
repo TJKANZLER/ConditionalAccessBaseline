@@ -1,5 +1,19 @@
 # Changelog
 
+## 3.6.0 — 2026-08-27
+
+- Corrected CA401 to combine `riskRemediation` with the built-in MFA authentication strength using `AND`, and added regression checks for the current Microsoft Graph requirements.
+- Added CA110 and CA111 plus `MSP-CA-Include-HighValueUsers`, giving finance and other high-impact users phishing-resistant MFA across all resources and compliant-device enforcement for browser access.
+- Extended CA307 configuration to accept only the documented Azure Virtual Desktop, Windows 365, and Windows Cloud Login resource IDs when Windows App is deployed.
+- Made regeneration prune retired `MSP-CA*.json` policy and group artifacts from the dedicated generated directories.
+- Expanded the suite to 35 Report-only policies and 20 supporting groups, with updated package readiness and acceptance tests.
+
+## 3.5.0 — 2026-08-27
+
+- Split ordinary internal-user session enforcement into mutually exclusive location scopes: CA010 now applies a 14-day sign-in frequency at trusted locations, while new CA012 retains 24 hours outside trusted locations.
+- Kept persistent browser sessions disabled in both policies and retained the emergency-access and temporary MFA-exception exclusions.
+- Expanded the suite to 33 Report-only policies and added validation that the trusted and untrusted scopes cannot overlap.
+
 ## 3.4.0 — 2026-07-29
 
 - Extended CA102 compliant-device enforcement from Windows/macOS to Windows, macOS, iOS, Android, and Linux.

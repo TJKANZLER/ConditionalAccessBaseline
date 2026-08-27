@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [string]$RepositoryRoot = (Split-Path -Parent $PSScriptRoot)
+    [string]$RepositoryRoot = (Split-Path -Parent $PSScriptRoot),
+    [bool]$PruneStaleGeneratedFiles = $true
 )
 
 $ErrorActionPreference = 'Stop'
@@ -17,11 +18,14 @@ if (-not (Test-Path -LiteralPath $extensionPath)) {
     throw "Policy extension configuration is missing: $extensionPath"
 }
 $extensions = Import-PowerShellDataFile -LiteralPath $extensionPath
-if ($extensions.SchemaVersion -ne '2.0') {
+if ($extensions.SchemaVersion -ne '3.0') {
     throw "Unsupported PolicyExtensions.psd1 SchemaVersion: $($extensions.SchemaVersion)"
 }
 if (-not $extensions.ContainsKey('AdditionalMamProtectedResources')) {
     throw 'PolicyExtensions.psd1 must declare AdditionalMamProtectedResources.'
+}
+if (-not $extensions.ContainsKey('AdditionalWindowsTokenProtectionResources')) {
+    throw 'PolicyExtensions.psd1 must declare AdditionalWindowsTokenProtectionResources.'
 }
 if ($extensions.ContainsKey('AdditionalMamApplicationIds')) {
     throw 'Retired AdditionalMamApplicationIds setting found; use AdditionalMamProtectedResources.'
@@ -41,6 +45,29 @@ if (@($additionalMamProtectedResourceIds | Select-Object -Unique).Count -ne @($a
     throw 'AdditionalMamProtectedResources contains a duplicate ApplicationId.'
 }
 $mamProtectedResourceIds = @('Office365') + @($additionalMamProtectedResourceIds)
+
+$supportedOptionalTokenProtectionResources = [ordered]@{
+    '9cdead84-a844-4324-93f2-b2e6bb768d07' = 'Azure Virtual Desktop'
+    '0af06dc6-e4b5-4f28-818e-e78e62d137a5' = 'Windows 365'
+    '270efc09-cd0d-444b-a71f-39af4910ec45' = 'Windows Cloud Login'
+}
+$additionalWindowsTokenProtectionResources = @($extensions.AdditionalWindowsTokenProtectionResources)
+$additionalWindowsTokenProtectionResourceIds = foreach ($resource in $additionalWindowsTokenProtectionResources) {
+    if (-not $resource.ApplicationId -or -not $resource.DisplayName) {
+        throw 'Every AdditionalWindowsTokenProtectionResources entry requires ApplicationId and DisplayName.'
+    }
+    $applicationId = [string]$resource.ApplicationId
+    if (-not $supportedOptionalTokenProtectionResources.Contains($applicationId)) {
+        throw "Unsupported optional Windows token-protection resource: $applicationId"
+    }
+    if ([string]$resource.DisplayName -ne $supportedOptionalTokenProtectionResources[$applicationId]) {
+        throw "Windows token-protection resource $applicationId must use display name '$($supportedOptionalTokenProtectionResources[$applicationId])'."
+    }
+    $applicationId
+}
+if (@($additionalWindowsTokenProtectionResourceIds | Select-Object -Unique).Count -ne @($additionalWindowsTokenProtectionResourceIds).Count) {
+    throw 'AdditionalWindowsTokenProtectionResources contains a duplicate ApplicationId.'
+}
 
 function Write-JsonFile {
     param(
@@ -74,6 +101,7 @@ $ids = [ordered]@{
     ExcludeCountryRestriction = '10000000-0000-4000-8000-000000000018'
     ExcludeRegistrationLocation = '10000000-0000-4000-8000-000000000019'
     IncludePrivilegedUsers  = '10000000-0000-4000-8000-000000000020'
+    IncludeHighValueUsers   = '10000000-0000-4000-8000-000000000021'
 }
 
 $groupNames = [ordered]@{
@@ -96,6 +124,7 @@ $groupNames = [ordered]@{
     ExcludeCountryRestriction = 'MSP-CA-Exclude-CountryRestriction'
     ExcludeRegistrationLocation = 'MSP-CA-Exclude-RegistrationLocation'
     IncludePrivilegedUsers = 'MSP-CA-Include-PrivilegedUsers'
+    IncludeHighValueUsers  = 'MSP-CA-Include-HighValueUsers'
 }
 
 $groupDescriptions = [ordered]@{
@@ -118,6 +147,7 @@ $groupDescriptions = [ordered]@{
     ExcludeCountryRestriction = 'Time-bound travel or business exception from the optional country restriction. Keep empty by default.'
     ExcludeRegistrationLocation = 'Temporary exception from CA009 security-information registration location restrictions only. Keep empty by default.'
     IncludePrivilegedUsers = 'Custom-role, administrative-unit-scoped, and other privileged users not covered by the built-in administrator role list. Keep empty until explicitly populated.'
+    IncludeHighValueUsers  = 'Finance, payroll, executive, legal, and other high-impact users requiring phishing-resistant authentication and managed browser access. Keep empty until explicitly populated.'
 }
 
 # Microsoft Entra Connect's built-in role is excluded from user-scoped policies.
@@ -181,7 +211,7 @@ function New-ServiceProviderUsersObject {
 
 function New-UserScope {
     param(
-        [ValidateSet('AllHuman', 'Internal', 'Guests', 'Admins', 'ManagedMobile', 'MfaExceptionAccounts')]
+        [ValidateSet('AllHuman', 'Internal', 'Guests', 'Admins', 'HighValue', 'ManagedMobile', 'MfaExceptionAccounts')]
         [string]$Scope,
         [string[]]$ExcludeGroups = @()
     )
@@ -215,6 +245,9 @@ function New-UserScope {
             $users.includeRoles = @($adminRoleTemplateIds)
             $users.includeGroups = @($ids.IncludePrivilegedUsers)
             $users.excludeGuestsOrExternalUsers = New-ServiceProviderUsersObject
+        }
+        'HighValue' {
+            $users.includeGroups = @($ids.IncludeHighValueUsers)
         }
         'ManagedMobile' {
             $users.includeGroups = @($ids.IncludeManagedMobile)
@@ -334,7 +367,7 @@ $tokenProtectionResources = @(
     '00000002-0000-0ff1-ce00-000000000000',
     '00000003-0000-0ff1-ce00-000000000000',
     'cc15fd57-2c6c-4117-a88c-83b1d56b4bbe'
-)
+) + @($additionalWindowsTokenProtectionResourceIds)
 $countryRestrictionLocation = [ordered]@{
     id          = '20000000-0000-4000-8000-000000000001'
     displayName = 'SHOOTHILL-CA-Allowed-Countries-Operator-Defined'
@@ -384,8 +417,19 @@ $policies += New-Policy -DisplayName 'MSP-CA009-Registration-Block-Outside-Trust
         -Locations ([ordered]@{ includeLocations = @('All'); excludeLocations = @('AllTrusted') })) `
     -GrantControls (New-Grant -BuiltInControls @('block'))
 
-$policies += New-Policy -DisplayName 'MSP-CA010-Global-InternalUser-Session-Hardening' `
-    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeMfa))) `
+$policies += New-Policy -DisplayName 'MSP-CA010-InternalUsers-TrustedLocation-Session-Hardening' `
+    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeMfa)) `
+        -Locations ([ordered]@{ includeLocations = @('AllTrusted'); excludeLocations = @() })) `
+    -SessionControls ([ordered]@{
+        signInFrequency = [ordered]@{
+            value = 14; type = 'days'; authenticationType = 'primaryAndSecondaryAuthentication'; frequencyInterval = 'timeBased'; isEnabled = $true
+        }
+        persistentBrowser = [ordered]@{ mode = 'never'; isEnabled = $true }
+    })
+
+$policies += New-Policy -DisplayName 'MSP-CA012-InternalUsers-UntrustedLocation-Session-Hardening' `
+    -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeMfa)) `
+        -Locations ([ordered]@{ includeLocations = @('All'); excludeLocations = @('AllTrusted') })) `
     -SessionControls ([ordered]@{
         signInFrequency = [ordered]@{
             value = 24; type = 'hours'; authenticationType = 'primaryAndSecondaryAuthentication'; frequencyInterval = 'timeBased'; isEnabled = $true
@@ -424,6 +468,16 @@ $policies += New-Policy -DisplayName 'MSP-CA103-Admins-Block-Outside-TrustedLoca
     -Conditions (New-Conditions -Users (New-UserScope Admins -ExcludeGroups @($allGroup, $ids.ExcludeAdminLocation)) `
         -Locations ([ordered]@{ includeLocations = @('All'); excludeLocations = @('AllTrusted') })) `
     -GrantControls (New-Grant -BuiltInControls @('block'))
+
+$policies += New-Policy -DisplayName 'MSP-CA110-HighValueUsers-Require-PhishingResistantMFA' `
+    -Conditions (New-Conditions -Users (New-UserScope HighValue -ExcludeGroups @($allGroup))) `
+    -GrantControls (New-Grant -Operator AND -AuthenticationStrength $phishingResistantStrength)
+
+$policies += New-Policy -DisplayName 'MSP-CA111-HighValueUsers-Browser-Require-CompliantDevice' `
+    -Conditions (New-Conditions -Users (New-UserScope HighValue -ExcludeGroups @($allGroup)) `
+        -Applications (New-ApplicationsScope -ExcludeApplications $intuneExclusions) `
+        -ClientAppTypes @('browser')) `
+    -GrantControls (New-Grant -BuiltInControls @('compliantDevice'))
 
 $policies += New-Policy -DisplayName 'MSP-CA200-Guests-Require-MFA' `
     -Conditions (New-Conditions -Users (New-UserScope Guests -ExcludeGroups @($allGroup))) `
@@ -533,7 +587,7 @@ $policies += New-Policy -DisplayName 'MSP-CA400-Risk-SignIn-MediumHigh-Require-M
 $policies += New-Policy -DisplayName 'MSP-CA401-Risk-User-High-Require-Remediation' `
     -Conditions (New-Conditions -Users (New-UserScope Internal -ExcludeGroups @($allGroup, $ids.ExcludeRisk, $ids.ExcludeMfa)) `
         -UserRiskLevels @('high')) `
-    -GrantControls (New-Grant -BuiltInControls @('riskRemediation')) `
+    -GrantControls (New-Grant -BuiltInControls @('riskRemediation') -Operator AND -AuthenticationStrength $mfaStrength) `
     -SessionControls ([ordered]@{ signInFrequency = $everyTime })
 
 $policies += New-Policy -DisplayName 'MSP-CA402-InsiderRisk-Elevated-Block' `
@@ -563,9 +617,27 @@ $policies += New-Policy -DisplayName 'MSP-CA600-MFAExceptionAccounts-Block-Outsi
         -Locations ([ordered]@{ includeLocations = @('All'); excludeLocations = @('AllTrusted') })) `
     -GrantControls (New-Grant -BuiltInControls @('block'))
 
+$expectedPolicyFileNames = @($policies | ForEach-Object {
+    '{0}.json' -f ($_.displayName -replace '[\\/:*?"<>|]', '-')
+})
+if ($PruneStaleGeneratedFiles) {
+    foreach ($staleFile in Get-ChildItem -LiteralPath $policyRoot -Filter 'MSP-CA*.json' -File |
+        Where-Object Name -notin $expectedPolicyFileNames) {
+        Remove-Item -LiteralPath $staleFile.FullName -Force
+    }
+}
+
 foreach ($policy in $policies) {
     $fileName = '{0}.json' -f ($policy.displayName -replace '[\\/:*?"<>|]', '-')
     Write-JsonFile -InputObject $policy -Path (Join-Path $policyRoot $fileName)
+}
+
+$expectedGroupFileNames = @($groupNames.Values | ForEach-Object { "$_.json" })
+if ($PruneStaleGeneratedFiles) {
+    foreach ($staleFile in Get-ChildItem -LiteralPath $groupRoot -Filter 'MSP-CA*.json' -File |
+        Where-Object Name -notin $expectedGroupFileNames) {
+        Remove-Item -LiteralPath $staleFile.FullName -Force
+    }
 }
 
 foreach ($key in $ids.Keys) {

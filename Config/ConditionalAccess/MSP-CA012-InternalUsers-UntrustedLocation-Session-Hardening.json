@@ -1,13 +1,20 @@
 {
   "@odata.type": "#microsoft.graph.conditionalAccessPolicy",
-  "displayName": "MSP-CA401-Risk-User-High-Require-Remediation",
+  "displayName": "MSP-CA012-InternalUsers-UntrustedLocation-Session-Hardening",
   "state": "enabledForReportingButNotEnforced",
   "conditions": {
     "clientAppTypes": [
       "all"
     ],
     "platforms": null,
-    "locations": null,
+    "locations": {
+      "includeLocations": [
+        "All"
+      ],
+      "excludeLocations": [
+        "AllTrusted"
+      ]
+    },
     "devices": null,
     "authenticationFlows": null,
     "applications": {
@@ -27,7 +34,6 @@
       "includeGroups": [],
       "excludeGroups": [
         "10000000-0000-4000-8000-000000000001",
-        "10000000-0000-4000-8000-000000000009",
         "10000000-0000-4000-8000-000000000002"
       ],
       "includeRoles": [],
@@ -43,31 +49,19 @@
           "membershipKind": "all"
         }
       }
-    },
-    "userRiskLevels": [
-      "high"
-    ]
-  },
-  "grantControls": {
-    "operator": "AND",
-    "builtInControls": [
-      "riskRemediation"
-    ],
-    "customAuthenticationFactors": [],
-    "termsOfUse": [],
-    "authenticationStrength": {
-      "id": "00000000-0000-0000-0000-000000000002",
-      "displayName": "Multifactor authentication",
-      "policyType": "builtIn",
-      "requirementsSatisfied": "mfa"
     }
   },
+  "grantControls": null,
   "sessionControls": {
     "signInFrequency": {
-      "value": null,
-      "type": null,
+      "value": 24,
+      "type": "hours",
       "authenticationType": "primaryAndSecondaryAuthentication",
-      "frequencyInterval": "everyTime",
+      "frequencyInterval": "timeBased",
+      "isEnabled": true
+    },
+    "persistentBrowser": {
+      "mode": "never",
       "isEnabled": true
     }
   }
