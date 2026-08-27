@@ -1,6 +1,6 @@
 # Operator policy guide
 
-All policies begin Report-only. Packages 01–05 are the standard rollout. Package 06 is adopted only by an explicit tenant decision. Promote any adopted package only after its readiness gate in `Config/PolicyPackages.psd1` is satisfied.
+All policies begin Report-only in Packages 01–05. Promote a package—or an individually gated policy such as CA011—only after its readiness gate in `Config/PolicyPackages.psd1` is satisfied.
 
 ## 01 — Core Identity and External Access P1
 

@@ -1,6 +1,6 @@
 # Conditional Access acceptance test plan
 
-Run this plan after import, after any policy change, and before promoting each adopted package from Report-only. Packages 01–05 are the standard rollout. Package 06 is tested only after an explicit tenant decision to adopt country restriction. Use dedicated test identities and devices; never use an emergency-access account for normal administration.
+Run this plan after import, after any policy change, and before promoting each package from Report-only. Packages 01–05 are the standard rollout; CA011 within Package 01 remains Report-only until its tenant country and travel tests pass. Use dedicated test identities and devices; never use an emergency-access account for normal administration.
 
 Record for every test:
 
@@ -91,13 +91,13 @@ Core is accepted only when both trusted and deliberately untrusted location test
 | Elevated insider risk | Use the approved Purview Adaptive Protection test procedure | CA402 reports block and the HR/legal/security incident path receives the event |
 | Service-account insider-risk scope | Inspect a temporary user service account and CA402 What If result | CA402 does not apply to the account while CA600 continues to constrain its egress |
 
-## Package 06 — Optional Country Restriction
+## Package 01 — Country Restriction Readiness
 
-Do not run this section during the standard five-package rollout. First create the exact tenant-owned named location `SHOOTHILL-CA-Allowed-Countries-Operator-Defined` and populate its approved countries.
+CA011 deploys in Report-only with the Core package. Before enforcement, create the exact tenant-owned named location `SHOOTHILL-CA-Allowed-Countries-Operator-Defined` and populate its approved countries.
 
 | Scenario | Test path | Expected result |
 |---|---|---|
-| Package not adopted | Inspect the tenant's standard package assignments | Package 06 and CA011 are absent |
+| Initial deployment | Inspect CA011 after the Core package run | CA011 exists in Report-only |
 | Allowed country | Internal test user signs in from each approved operating country | CA011 does not block |
 | Disallowed country | Internal test user signs in through a controlled egress outside the approved list | CA011 reports block |
 | Unknown location | Exercise the tenant's approved unknown-country test path | Result matches the documented `includeUnknownCountriesAndRegions` decision |
@@ -105,7 +105,7 @@ Do not run this section during the standard five-package rollout. First create t
 | Travel exception | Add a test user temporarily to `MSP-CA-Exclude-CountryRestriction` and repeat the denied path | CA011 does not apply; membership is removed and the time-bound exception record is retained |
 | Emergency recovery | Test both emergency-access accounts from outside the approved list | CA011 does not apply and emergency-use monitoring records the sign-in |
 
-Package 06 is accepted only when the country list has an owner and review date, permitted and denied paths pass, unknown-location behavior is deliberate, and travel/recovery processes are operational.
+CA011 is accepted for enforcement only when the country list has an owner and review date, permitted and denied paths pass, unknown-location behavior is deliberate, and travel/recovery processes are operational.
 
 ## Promotion and rollback acceptance
 

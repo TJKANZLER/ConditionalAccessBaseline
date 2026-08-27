@@ -18,7 +18,7 @@ The suite maps security objectives to explicit production paths by licence and o
 | Desktop access | Microsoft Intune compliance guidance | Separate Windows, macOS, and Linux compliance policies |
 | Unmanaged browser | Microsoft app-enforced restrictions | Restrict Exchange/SharePoint downloads on noncompliant devices |
 | Token replay | Microsoft Token Protection guidance | Windows GA; Exchange, SharePoint, and Microsoft Teams Services by default, with validated Azure Virtual Desktop, Windows 365, and Windows Cloud Login extensions where Windows App is deployed |
-| Network boundary | Microsoft location-based CA guidance | Separate admin and registration location exceptions, non-bypassable trusted-location compensation for MFA-exempt accounts, and an explicit-adoption country restriction evaluated from public egress IP |
+| Network boundary | Microsoft location-based CA guidance | Separate admin and registration location exceptions, non-bypassable trusted-location compensation for MFA-exempt accounts, and a Core country restriction evaluated from public egress IP and kept Report-only until tenant readiness is proven |
 | Identity risk | Microsoft Entra ID Protection and Microsoft Graph grant-control contract | Separate sign-in-risk and user-risk policies in a P2 package; risk remediation is combined with MFA authentication strength using `AND` |
 | Workload identities | Microsoft workload Conditional Access | Risk and location controls in a Workload ID Premium package |
 | Advanced sessions and risk | Microsoft Defender for Cloud Apps and Purview | Defender monitoring and insider-risk enforcement in an integration-gated package |

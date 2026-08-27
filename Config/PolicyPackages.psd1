@@ -1,5 +1,5 @@
 @{
-    SchemaVersion = '5.1'
+    SchemaVersion = '5.2'
     Packages = @(
         @{
             Name = 'SHOOTHILL-CA-01-Core-Identity-and-External-Access-P1'
@@ -18,6 +18,7 @@
                 'MSP-CA202-Guests-Block-AdminPortals'
                 'MSP-CA009-Registration-Block-Outside-TrustedLocations'
                 'MSP-CA010-InternalUsers-TrustedLocation-Session-Hardening'
+                'MSP-CA011-Global-Block-Outside-AllowedCountries'
                 'MSP-CA012-InternalUsers-UntrustedLocation-Session-Hardening'
                 'MSP-CA103-Admins-Block-Outside-TrustedLocations'
                 'MSP-CA600-MFAExceptionAccounts-Block-Outside-TrustedLocations'
@@ -73,15 +74,6 @@
             Policies = @(
                 'MSP-CA309-M365-Browser-Monitor-With-DefenderAppControl'
                 'MSP-CA402-InsiderRisk-Elevated-Block'
-            )
-        }
-        @{
-            Name = 'SHOOTHILL-CA-06-Optional-Country-Restriction'
-            PromotionTrack = 'ExplicitAdoption'
-            Purpose = 'Optional internal-user block outside a tenant-owned allowed-country named location.'
-            ReadinessGate = 'The tenant has explicitly adopted country restriction, created the exact required named location, validated every operating/travel country and unknown-location behavior, and approved a maintained exception process.'
-            Policies = @(
-                'MSP-CA011-Global-Block-Outside-AllowedCountries'
             )
         }
     )

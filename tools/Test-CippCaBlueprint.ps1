@@ -468,12 +468,12 @@ if (-not (Test-Path -LiteralPath $packagePath)) {
 }
 else {
     $packageManifest = Import-PowerShellDataFile -LiteralPath $packagePath
-    if ($packageManifest.SchemaVersion -ne '5.1') {
+    if ($packageManifest.SchemaVersion -ne '5.2') {
         $errors.Add("Unsupported PolicyPackages.psd1 SchemaVersion: $($packageManifest.SchemaVersion)")
     }
     $packages = @($packageManifest.Packages)
-    if ($packages.Count -ne 6) {
-        $errors.Add("Expected six activation packages but found $($packages.Count).")
+    if ($packages.Count -ne 5) {
+        $errors.Add("Expected five activation packages but found $($packages.Count).")
     }
     $expectedPackageNames = @(
         'SHOOTHILL-CA-01-Core-Identity-and-External-Access-P1'
@@ -481,7 +481,6 @@ else {
         'SHOOTHILL-CA-03-Identity-Protection-P2'
         'SHOOTHILL-CA-04-Workload-Identity-Premium'
         'SHOOTHILL-CA-05-Defender-and-Purview-Advanced'
-        'SHOOTHILL-CA-06-Optional-Country-Restriction'
     )
     foreach ($expectedName in $expectedPackageNames) {
         if ($expectedName -notin @($packages.Name)) {
@@ -494,6 +493,7 @@ else {
         'MSP-CA006-Global-Block-AuthenticationTransfer'
         'MSP-CA009-Registration-Block-Outside-TrustedLocations'
         'MSP-CA010-InternalUsers-TrustedLocation-Session-Hardening'
+        'MSP-CA011-Global-Block-Outside-AllowedCountries'
         'MSP-CA012-InternalUsers-UntrustedLocation-Session-Hardening'
         'MSP-CA103-Admins-Block-Outside-TrustedLocations'
         'MSP-CA600-MFAExceptionAccounts-Block-Outside-TrustedLocations'
@@ -514,20 +514,16 @@ else {
     }
 
     $standardPackages = @($packages | Where-Object PromotionTrack -eq 'Standard')
-    $optionalPackage = $packages | Where-Object Name -eq 'SHOOTHILL-CA-06-Optional-Country-Restriction'
     if ($standardPackages.Count -ne 5 -or
-        $optionalPackage.PromotionTrack -ne 'ExplicitAdoption' -or
-        @($optionalPackage.Policies).Count -ne 1 -or
-        $optionalPackage.Policies -notcontains 'MSP-CA011-Global-Block-Outside-AllowedCountries' -or
-        @($standardPackages.Policies) -contains 'MSP-CA011-Global-Block-Outside-AllowedCountries') {
-        $errors.Add('CA011 must exist only in the explicit-adoption optional country-restriction package.')
+        @($corePackage.Policies) -notcontains 'MSP-CA011-Global-Block-Outside-AllowedCountries') {
+        $errors.Add('CA011 must be included in the standard Core P1 package.')
     }
 
     foreach ($package in $packages) {
         if (-not $package.Name -or -not $package.PromotionTrack -or -not $package.Purpose -or -not $package.ReadinessGate -or @($package.Policies).Count -eq 0) {
             $errors.Add('Each package needs a descriptive name, promotion track, purpose, readiness gate, and at least one policy.')
         }
-        if ($package.PromotionTrack -notin @('Standard', 'ExplicitAdoption')) {
+        if ($package.PromotionTrack -ne 'Standard') {
             $errors.Add("Unsupported package promotion track '$($package.PromotionTrack)' in $($package.Name)")
         }
     }
@@ -553,4 +549,4 @@ if ($errors.Count -gt 0) {
     exit 1
 }
 
-Write-Output "PASS: 35 production policies (all Report-only), 20 groups, five standard packages plus one explicit-adoption optional package, safe CIPP layout, and validated Microsoft dependencies."
+Write-Output "PASS: 35 production policies (all Report-only), 20 groups, five standard packages with Core country restriction, safe CIPP layout, and validated Microsoft dependencies."

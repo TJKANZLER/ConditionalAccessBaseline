@@ -1,15 +1,14 @@
 # Conditional Access policy matrix
 
-All 35 policies start Report-only. Packages 01–05 are the standard rollout; package 06 is an explicit-adoption option, not a standard promotion step.
+All 35 policies start Report-only in five standard rollout packages.
 
 | Package | Policies | Production coverage |
 |---:|---|---|
-| 01 Core Identity and External Access | CA001–CA006, CA009–CA010, CA012, CA103, CA200–CA202, CA600 | Authentication, registration, authentication-flow, internal/guest session, and trusted-location controls |
+| 01 Core Identity and External Access | CA001–CA006, CA009–CA012, CA103, CA200–CA202, CA600 | Authentication, registration, authentication-flow, internal/guest session, trusted-location, and country controls |
 | 02 Privileged, Endpoint and App Protection | CA007, CA100–CA102, CA110–CA111, CA300–CA307 | Administrator/high-value identity, platform, MAM, browser, compliance, and token controls |
 | 03 Identity Protection P2 | CA400–CA401 | Sign-in risk MFA and high user-risk remediation |
 | 04 Workload Identity Premium | CA500–CA501 | Service-principal risk and location controls |
 | 05 Defender and Purview | CA309, CA402 | Defender App Control monitoring and insider-risk enforcement |
-| 06 Optional Country Restriction | CA011 | Explicit-adoption internal-user block outside a tenant-owned allowed-country location |
 
 ## Exact policies
 
@@ -24,7 +23,7 @@ All 35 policies start Report-only. Packages 01–05 are the standard rollout; pa
 | CA007 | Block unknown or unsupported platforms | Supported-platform decision |
 | CA009 | Block security-info registration outside trusted locations | Trusted registration paths |
 | CA010 | Harden internal-user sessions at trusted locations | IP-based trusted named locations; 14-day sign-in frequency; user service accounts excluded |
-| CA011 | Block internal users outside allowed countries | Explicit adoption, operator-owned named location, and user service accounts excluded |
+| CA011 | Block internal users outside allowed countries | Operator-owned named location, travel process, and user service accounts excluded |
 | CA012 | Harden internal-user sessions outside trusted locations | 24-hour sign-in frequency; user service accounts excluded |
 | CA100 | Require phishing-resistant MFA for admins | Resistant methods for 14 recommended roles plus declared privileged users |
 | CA101 | Harden admin sessions | Separate admin identities |

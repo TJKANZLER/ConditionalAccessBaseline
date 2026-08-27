@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.7.0 — 2026-08-27
+
+- Moved CA011 country restriction into the standard Core P1 package so every tenant receives it in Report-only by default.
+- Removed the separate optional country-restriction package while retaining tenant-owned country lists, travel exceptions, and enforcement readiness gates.
+- Corrected the deployment runbook group-template count from 19 to 20.
+
 ## 3.6.0 — 2026-08-27
 
 - Corrected CA401 to combine `riskRemediation` with the built-in MFA authentication strength using `AND`, and added regression checks for the current Microsoft Graph requirements.
