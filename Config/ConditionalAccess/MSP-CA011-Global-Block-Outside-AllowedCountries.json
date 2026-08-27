@@ -64,8 +64,11 @@
   "sessionControls": null,
   "LocationInfo": [
     {
+      "@odata.type": "#microsoft.graph.countryNamedLocation",
       "id": "20000000-0000-4000-8000-000000000001",
-      "displayName": "SHOOTHILL-CA-Allowed-Countries-Operator-Defined"
+      "displayName": "SHOOTHILL-CA-Allowed-Countries-Operator-Defined",
+      "includeUnknownCountriesAndRegions": false,
+      "countryLookupMethod": "clientIpAddress"
     }
   ]
 }

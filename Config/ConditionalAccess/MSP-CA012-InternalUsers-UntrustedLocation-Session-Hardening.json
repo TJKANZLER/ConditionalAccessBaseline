@@ -54,8 +54,8 @@
   "grantControls": null,
   "sessionControls": {
     "signInFrequency": {
-      "value": 24,
-      "type": "hours",
+      "value": 1,
+      "type": "days",
       "authenticationType": "primaryAndSecondaryAuthentication",
       "frequencyInterval": "timeBased",
       "isEnabled": true

@@ -9,8 +9,9 @@ $ErrorActionPreference = 'Stop'
 $configRoot = Join-Path $RepositoryRoot 'Config'
 $policyRoot = Join-Path $configRoot 'ConditionalAccess'
 $groupRoot = Join-Path $configRoot 'Groups'
+$namedLocationRoot = Join-Path $configRoot 'NamedLocations'
 $extensionPath = Join-Path $configRoot 'PolicyExtensions.psd1'
-foreach ($path in @($configRoot, $policyRoot, $groupRoot)) {
+foreach ($path in @($configRoot, $policyRoot, $groupRoot, $namedLocationRoot)) {
     New-Item -ItemType Directory -Path $path -Force | Out-Null
 }
 
@@ -369,8 +370,11 @@ $tokenProtectionResources = @(
     'cc15fd57-2c6c-4117-a88c-83b1d56b4bbe'
 ) + @($additionalWindowsTokenProtectionResourceIds)
 $countryRestrictionLocation = [ordered]@{
-    id          = '20000000-0000-4000-8000-000000000001'
-    displayName = 'SHOOTHILL-CA-Allowed-Countries-Operator-Defined'
+    '@odata.type'                      = '#microsoft.graph.countryNamedLocation'
+    id                                 = '20000000-0000-4000-8000-000000000001'
+    displayName                        = 'SHOOTHILL-CA-Allowed-Countries-Operator-Defined'
+    includeUnknownCountriesAndRegions = $false
+    countryLookupMethod                = 'clientIpAddress'
 }
 
 $policies += New-Policy -DisplayName 'MSP-CA001-Global-Block-LegacyAuthentication' `
@@ -432,7 +436,7 @@ $policies += New-Policy -DisplayName 'MSP-CA012-InternalUsers-UntrustedLocation-
         -Locations ([ordered]@{ includeLocations = @('All'); excludeLocations = @('AllTrusted') })) `
     -SessionControls ([ordered]@{
         signInFrequency = [ordered]@{
-            value = 24; type = 'hours'; authenticationType = 'primaryAndSecondaryAuthentication'; frequencyInterval = 'timeBased'; isEnabled = $true
+            value = 1; type = 'days'; authenticationType = 'primaryAndSecondaryAuthentication'; frequencyInterval = 'timeBased'; isEnabled = $true
         }
         persistentBrowser = [ordered]@{ mode = 'never'; isEnabled = $true }
     })
@@ -631,6 +635,12 @@ foreach ($policy in $policies) {
     $fileName = '{0}.json' -f ($policy.displayName -replace '[\\/:*?"<>|]', '-')
     Write-JsonFile -InputObject $policy -Path (Join-Path $policyRoot $fileName)
 }
+
+# CIPP discovers companion named-location metadata by the words "ALLOWED COUNTRIES"
+# in the filename while importing CA templates. The country list is deliberately omitted:
+# operators must precreate it, and Standards must never overwrite tenant-approved countries.
+Write-JsonFile -InputObject $countryRestrictionLocation `
+    -Path (Join-Path $namedLocationRoot 'SHOOTHILL-CA-ALLOWED COUNTRIES-Operator-Defined.json') -Depth 10
 
 $expectedGroupFileNames = @($groupNames.Values | ForEach-Object { "$_.json" })
 if ($PruneStaleGeneratedFiles) {

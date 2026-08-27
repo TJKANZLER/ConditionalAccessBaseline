@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.8.0 — 2026-08-27
+
+- Corrected CA012's 24-hour sign-in frequency to the Graph-valid equivalent of one day.
+- Added CIPP companion metadata that resolves CA011 to a pre-created country named location without defining or overwriting the tenant's approved countries.
+- Added regression checks for both live-deployment failures found during the first Lloyds Standards run.
+
 ## 3.7.0 — 2026-08-27
 
 - Moved CA011 country restriction into the standard Core P1 package so every tenant receives it in Report-only by default.

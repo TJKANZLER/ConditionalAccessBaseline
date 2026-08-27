@@ -20,7 +20,8 @@ The repository contains 35 Report-only Conditional Access templates, 20 group te
 2. Import the 20 files under `Config/Groups`.
 3. Import the 35 files under `Config/ConditionalAccess`.
 4. Confirm CIPP resolves every template group ID through `Config/MigrationTable.json`.
-5. Confirm every imported policy state is Report-only.
+5. Confirm CA011 contains the companion named-location metadata from `Config/NamedLocations`.
+6. Confirm every imported policy state is Report-only.
 
 Do not import `MigrationTable.json`, `PolicyExtensions.psd1`, or `PolicyPackages.psd1` as templates.
 
@@ -91,7 +92,7 @@ CA011 is part of `SHOOTHILL-CA-01-Core-Identity-and-External-Access-P1` for ever
 6. Run the country-restriction test section in `TEST-PLAN.md` while CA011 remains Report-only.
 7. Promote only after permitted, denied, travelling-user, proxy/VPN, and exception cases all match the approved model.
 
-CA011 carries only the location's stable placeholder ID and required display name. CIPP resolves it to the pre-existing tenant location. The repository does not create or overwrite the tenant's country list.
+CA011 carries a stable placeholder ID plus a CIPP `ALLOWED COUNTRIES` companion containing only the type, display name, lookup method, and unknown-region behavior. CIPP resolves it to the pre-existing tenant location. The repository deliberately omits `countriesAndRegions`, so it does not create or overwrite the tenant's approved country list.
 
 ## 8. Additional MAM-protected resources
 

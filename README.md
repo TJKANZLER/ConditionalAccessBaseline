@@ -44,6 +44,7 @@ Every package remains Report-only until its readiness gate is satisfied. CA011 i
 Config/
   ConditionalAccess/   35 CIPP Conditional Access templates
   Groups/              20 portable security-group templates
+  NamedLocations/      CIPP metadata for resolving the operator-owned country location
   MigrationTable.json  stable template-ID mappings
   PolicyExtensions.psd1 validated MAM and Windows App resource extensions
   PolicyPackages.psd1  exact package membership and readiness gates
@@ -58,7 +59,7 @@ tools/
 
 1. Add `TJKANZLER/ConditionalAccessBaseline` under **Tools → Community Repositories**.
 2. Import the 20 templates in `Config/Groups` before the 35 templates in `Config/ConditionalAccess`.
-3. Confirm CIPP applies `Config/MigrationTable.json` mappings and that every policy resolves its group references.
+3. Confirm CIPP applies `Config/MigrationTable.json` mappings and consumes the `ALLOWED COUNTRIES` companion metadata so every policy resolves its group and location references.
 4. Keep all imported policies Report-only.
 5. In **Available Conditional Access Templates**, assign policies to the five manifest package names.
 6. In a CIPP Standards template, add **Conditional Access Template**, select a package, choose Report-only, enable **Create Groups**, and disable Security Defaults only as part of the controlled CA rollout.

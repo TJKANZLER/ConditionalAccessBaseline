@@ -6,6 +6,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $policyRoot = Join-Path $RepositoryRoot 'Config\ConditionalAccess'
 $groupRoot = Join-Path $RepositoryRoot 'Config\Groups'
+$namedLocationPath = Join-Path $RepositoryRoot 'Config\NamedLocations\SHOOTHILL-CA-ALLOWED COUNTRIES-Operator-Defined.json'
 $migrationPath = Join-Path $RepositoryRoot 'Config\MigrationTable.json'
 $packagePath = Join-Path $RepositoryRoot 'Config\PolicyPackages.psd1'
 $extensionPath = Join-Path $RepositoryRoot 'Config\PolicyExtensions.psd1'
@@ -100,6 +101,7 @@ foreach ($property in 'id', 'displayName', 'mailNickname') {
 $allowedJsonPaths = @(
     (Get-ChildItem -LiteralPath $policyRoot -Filter '*.json').FullName
     (Get-ChildItem -LiteralPath $groupRoot -Filter '*.json').FullName
+    $namedLocationPath
     $migrationPath
 )
 foreach ($jsonFile in Get-ChildItem -LiteralPath $RepositoryRoot -Filter '*.json' -Recurse) {
@@ -273,8 +275,8 @@ if ($trustedSessionPolicy.conditions.locations.includeLocations -notcontains 'Al
 }
 if ($untrustedSessionPolicy.conditions.locations.includeLocations -notcontains 'All' -or
     $untrustedSessionPolicy.conditions.locations.excludeLocations -notcontains 'AllTrusted' -or
-    $untrustedSessionPolicy.sessionControls.signInFrequency.value -ne 24 -or
-    $untrustedSessionPolicy.sessionControls.signInFrequency.type -ne 'hours') {
+    $untrustedSessionPolicy.sessionControls.signInFrequency.value -ne 1 -or
+    $untrustedSessionPolicy.sessionControls.signInFrequency.type -ne 'days') {
     $errors.Add('CA012 must apply a 24-hour sign-in frequency outside trusted locations.')
 }
 
@@ -294,8 +296,28 @@ if ($countryPolicy.conditions.users.includeUsers -notcontains 'All' -or
     $countryPolicy.grantControls.builtInControls -notcontains 'block' -or
     @($countryPolicy.LocationInfo).Count -ne 1 -or
     $countryPolicy.LocationInfo[0].id -ne $countryLocationId -or
-    $countryPolicy.LocationInfo[0].displayName -ne $countryLocationName) {
+    $countryPolicy.LocationInfo[0].displayName -ne $countryLocationName -or
+    $countryPolicy.LocationInfo[0].'@odata.type' -ne '#microsoft.graph.countryNamedLocation' -or
+    $countryPolicy.LocationInfo[0].countryLookupMethod -ne 'clientIpAddress' -or
+    $countryPolicy.LocationInfo[0].includeUnknownCountriesAndRegions -ne $false) {
     $errors.Add('CA011 must block internal users outside its dedicated operator-defined allowed-country location.')
+}
+if (-not (Test-Path -LiteralPath $namedLocationPath)) {
+    $errors.Add('The CIPP ALLOWED COUNTRIES companion metadata file is missing.')
+} else {
+    try {
+        $namedLocation = Get-Content -LiteralPath $namedLocationPath -Raw | ConvertFrom-Json -Depth 20
+        if ($namedLocation.id -ne $countryLocationId -or
+            $namedLocation.displayName -ne $countryLocationName -or
+            $namedLocation.'@odata.type' -ne '#microsoft.graph.countryNamedLocation' -or
+            $namedLocation.countryLookupMethod -ne 'clientIpAddress' -or
+            $namedLocation.includeUnknownCountriesAndRegions -ne $false -or
+            $namedLocation.PSObject.Properties.Name -contains 'countriesAndRegions') {
+            $errors.Add('Allowed-country companion metadata must resolve the tenant location without defining or overwriting its country list.')
+        }
+    } catch {
+        $errors.Add("Invalid allowed-country companion metadata: $($_.Exception.Message)")
+    }
 }
 
 $extensionMamResourceIds = @()
